@@ -1,0 +1,26 @@
+{
+  "name": "koa-init",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dlyt/koa-init.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dlyt/koa-init/issues"
+  },
+  "homepage": "https://github.com/dlyt/koa-init#readme",
+  "dependencies": {
+    "elasticsearch": "^15.4.1",
+    "koa": "^2.5.0",
+    "koa-router": "^7.4.0",
+    "mongoose": "^5.4.19",
+    "request": "^2.88.0"
+  }
+}
