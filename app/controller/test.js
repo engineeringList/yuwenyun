@@ -91,15 +91,14 @@ TestCtrl.index = async (ctx) => {
                 }
             })
             params.query.bool.must = _must;
-            console.log(params.query.bool.must)
             options.body = JSON.stringify(params);
             const body = await _request(options);
-            ctx.body.data.correct = body
+            // ctx.body.data.correct = body
             // ctx.body.data.correct = params
-            // ctx.body.data.correct.push({
-            //     teacher_id: teacher_id,
-            //     buckets: body.aggregations.group_by_addTime.buckets
-            // })
+            ctx.body.data.correct.push({
+                teacher_id: teacher_id,
+                buckets: body.aggregations.group_by_addTime.buckets
+            })
         }
     } else if (type == '批改率') {
         let ratify, all;
