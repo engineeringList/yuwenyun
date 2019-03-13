@@ -136,9 +136,9 @@ TestCtrl.index = async (ctx) => {
             const allBuckets = all.aggregations.group_by_addTime.buckets;
             let buckets = [];
             for (let i = 0; i < len; i++) {
-                console.log(ratifyBuckets[i].doc_count)
-                console.log(allBuckets[i].doc_count)
-                if (ratifyBuckets[i]) {
+                // console.log(ratifyBuckets[i].doc_count)
+                // console.log(allBuckets[i].doc_count)
+                if (ratifyBuckets[i] && allBuckets[i].doc_count) {
                     buckets.push({
                         key: allBuckets[i].key,
                         doc_count: (ratifyBuckets[i].doc_count / allBuckets[i].doc_count).toFixed(2)
@@ -146,7 +146,7 @@ TestCtrl.index = async (ctx) => {
                 } else {
                     buckets.push({
                         key: allBuckets[i].key,
-                        doc_count: 0.00
+                        doc_count: '0.00'
                     });
                 }
                 // ratifyBuckets[i].doc_count = ratifyBuckets[i] ? ratifyBuckets[i].doc_count : 0;
@@ -158,6 +158,57 @@ TestCtrl.index = async (ctx) => {
             })
         }
         // ctx.body.data.correct = ratify.aggregations.group_by_addTime.buckets
+    } else if (type == '批注率') {
+        for (let teacher_id of teacherAry) {
+            // 批注数
+            let comment, all;
+            let _must = must.map(function (value) {
+                return value;
+            });
+            _must.push({
+                term: {
+                    'task.teacher._id': teacher_id
+                }
+            });
+            _must.push({
+                match: {
+                    status: '已批改',
+                }
+            });
+            _must.push({
+                exists: {
+                    field: 'correct',
+                }
+            });
+            params.query.bool.must = _must;            
+            options.body = JSON.stringify(params);
+            comment = await _request(options);
+            // 批注总数
+            params.query.bool.must = params.query.bool.must.slice(0,-1);
+            options.body = JSON.stringify(params);
+            all = await _request(options);
+            let len = all.aggregations.group_by_addTime.buckets.length;
+            const commentBuckets = comment.aggregations.group_by_addTime.buckets;
+            const allBuckets = all.aggregations.group_by_addTime.buckets;
+            let buckets = [];
+            for (let i = 0; i < len; i++) {
+                if (commentBuckets[i] && allBuckets[i].doc_count) {
+                    buckets.push({
+                        key: allBuckets[i].key,
+                        doc_count: (commentBuckets[i].doc_count / allBuckets[i].doc_count).toFixed(2)
+                    });
+                } else {
+                    buckets.push({
+                        key: allBuckets[i].key,
+                        doc_count: '0.00'
+                    });
+                }
+            }
+            ctx.body.data.correct.push({
+                teacher_id: teacher_id,
+                buckets: buckets
+            });
+        }
     }
 
     // const body = await _request(options)
