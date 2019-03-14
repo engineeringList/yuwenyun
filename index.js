@@ -3,6 +3,10 @@
 const Koa = require('koa');
 const app = new Koa();
 
+const morgan = require('koa-morgan');
+// log
+app.use(morgan('dev'));
+
 const router = require('./app/router');
 app.use(router.routes());
 

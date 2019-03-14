@@ -3,5 +3,5 @@
 const { TestCtrl } = require('../controller');
 
 module.exports = (router) => {
-    router.get('/test', TestCtrl.index);
+    router.get('/api/report/admin/homeworkCorrect', TestCtrl.homeworkCorrect);
 };

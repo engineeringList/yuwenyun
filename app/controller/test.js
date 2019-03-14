@@ -7,7 +7,7 @@ const request = require('request');
 // let password = 'Re12345678'
 // let auth = "Basic " + new Buffer(username + ":" + password).toString("base64")
 
-TestCtrl.index = async (ctx) => {
+TestCtrl.homeworkCorrect = async (ctx) => {
     ctx.body = {
         errno: 0,
         errmsg: '',
