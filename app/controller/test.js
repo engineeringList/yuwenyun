@@ -62,8 +62,8 @@ TestCtrl.homeworkCorrect = async (ctx) => {
                     min_doc_count: 0
                 },
             }
-        }
-        // size: 10
+        },
+        size: 0
     }
     const options = {
         url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/taskquestions/_search`,
@@ -117,11 +117,11 @@ TestCtrl.homeworkCorrect = async (ctx) => {
                     status: '已批改',
                 }
             });
-            params.query.bool.must = _must;            
+            params.query.bool.must = _must;
             options.body = JSON.stringify(params);
             ratify = await _request(options);
             // 提交总数
-            params.query.bool.must = params.query.bool.must.slice(0,-1);
+            params.query.bool.must = params.query.bool.must.slice(0, -1);
             params.query.bool.must_not.push({
                 match: {
                     status: '未答题',
@@ -179,11 +179,11 @@ TestCtrl.homeworkCorrect = async (ctx) => {
                     field: 'correct',
                 }
             });
-            params.query.bool.must = _must;            
+            params.query.bool.must = _must;
             options.body = JSON.stringify(params);
             comment = await _request(options);
             // 批注总数
-            params.query.bool.must = params.query.bool.must.slice(0,-1);
+            params.query.bool.must = params.query.bool.must.slice(0, -1);
             options.body = JSON.stringify(params);
             all = await _request(options);
             let len = all.aggregations.group_by_addTime.buckets.length;
@@ -264,7 +264,99 @@ TestCtrl.homeworkCorrect = async (ctx) => {
     // console.log(a)
     // console.log(response)
     // console.log(response.hits.hits)
+}
 
+TestCtrl.homeworkCount = async (ctx) => {
+    ctx.body = {
+        errno: 0,
+        errmsg: '',
+        data: {}
+    }
+    const { teacher_ids, start_time, end_time, cycle_type, type } = ctx.query;
+    if (!teacher_ids || !cycle_type || !type) {
+        ctx.body.errmsg = '参数不全';
+        return
+    }
+    const teacherAry = teacher_ids.split(',');
+    let must = [
+        {
+            range: {
+                'task.add_time': {
+                    gte: start_time,
+                    lte: end_time
+                }
+            }
+        },
+        {
+            term: {
+                "task.type": "homework",
+            }
+        }
+    ]
+    const params = {
+        query: {
+            bool: {
+                must: [],
+                must_not: []
+            },
+        },
+        aggs: {
+            group_by_addTime: {
+                date_histogram: {
+                    field: 'task.add_time',
+                    interval: cycle_type,
+                    min_doc_count: 0
+                }
+            }
+        },
+        size: 0
+    }
+    const options = {
+        url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/taskquestions/_search`,
+        metch: 'POST',
+        // body: JSON.stringify(params),
+        headers: {
+            "Authorization": 'Basic ZWxhc3RpYzokUmUxMjM0NTY3OA==',
+            'Content-Type': 'application/json'
+        }
+    }
+    ctx.body.data.correct = [];
+    if (type == '布置作业次数') {
+        params.aggs.group_by_addTime.aggs = {
+            homework_count: {
+                cardinality: {
+                    field: "task.id.keyword"
+                }
+            }
+        }
+    } else if (type == '布置作业题数') {
+        params.aggs.group_by_addTime.aggs = {
+            homework_count: {
+                cardinality: {
+                    field: "question_id.keyword"
+                }
+            }
+        }
+    }
+    for (let teacher_id of teacherAry) {
+        let _must = must.map(function (value) {
+            return value;
+        })
+        _must.push({
+            term: {
+                'task.teacher._id': teacher_id
+            }
+        })
+        params.query.bool.must = _must;
+        options.body = JSON.stringify(params);
+        const body = await _request(options);
+        // ctx.body.data.correct = body
+        // ctx.body.data.correct = params
+        ctx.body.data.correct.push({
+            teacher_id: teacher_id,
+            buckets: body.aggregations.group_by_addTime.buckets
+        })
+    }
 }
 
 const _request = (options) => {
