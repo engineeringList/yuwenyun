@@ -58,8 +58,8 @@ TestCtrl.homeworkCorrect = async (ctx) => {
         aggs: {
             group_by_addTime: {
                 date_histogram:  {
-                    "script" : {
-                        "inline" : "doc['task.add_time'].value * 1000"
+                    script: {
+                        inline: "doc['task.add_time'].value * 1000"
                     },
                     interval: cycle_type,
                     // format: 'yyyy-MM-dd HH',
@@ -698,6 +698,98 @@ TestCtrl.learningReport = async (ctx) => {
                 buckets: body.aggregations.group_by_addTime.buckets
             });
         }
+    }
+}
+
+TestCtrl.livenessReport = async (ctx) => {
+    ctx.body = {
+        errno: 0,
+        errmsg: '',
+        data: {}
+    }
+    const { param_id, start_time, end_time, type, cycle_type } = ctx.query;
+    if (!param_id || !type || !cycle_type) {
+        ctx.body.errmsg = '参数不全';
+        return
+    }
+    let must = [
+        {
+            range: {
+                eventtime: {
+                    gte: start_time,
+                    lte: end_time
+                }
+            }
+        },
+        {
+            match: {
+                event: 'LONGIN'
+            }
+        }
+    ]
+    const params = {
+        query: {
+            bool: {
+                must: [],
+                must_not: []
+            },
+        },
+        aggs: {
+            group_by_eventTime: {
+                date_histogram: {
+                    script: {
+                        inline: "doc['eventtime'].value * 1000"
+                    },
+                    interval: cycle_type,
+                    min_doc_count: 0,
+                },
+            }
+        },
+        size: 100
+    }
+    const options = {
+        url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/event/_search`,
+        metch: 'POST',
+        headers: {
+            "Authorization": 'Basic ZWxhc3RpYzokUmUxMjM0NTY3OA==',
+            'Content-Type': 'application/json'
+        }
+    }
+    ctx.body.data.livenessReport = [];
+    if (type == '学生') {
+        must.push({
+            term: {
+                "student._id": param_id,
+            }
+        });
+        must.push({
+            term: {
+                role: 'student',
+            }
+        });
+        params.query.bool.must = must;
+        options.body = JSON.stringify(params);
+        const body = await _request(options);
+        ctx.body.data.livenessReport = body.aggregations.group_by_eventTime.buckets;
+        // ctx.body.data.livenessReport = params;
+        // ctx.body.data.livenessReport = body;
+    } else if (type == '教师') {
+        must.push({
+            term: {
+                'teacher._id': param_id,
+            }
+        });
+        must.push({
+            term: {
+                role: 'teacher',
+            }
+        });
+        params.query.bool.must = must;
+        options.body = JSON.stringify(params);
+        const body = await _request(options);
+        // ctx.body.data.livenessReport = params;
+        ctx.body.data.livenessReport = body.aggregations.group_by_eventTime.buckets;
+        // ctx.body.data.livenessReport = body;
     }
 }
 
