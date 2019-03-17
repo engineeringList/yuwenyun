@@ -1355,6 +1355,223 @@ TestCtrl.classInformationCollect = async (ctx) => {
     }
 }
 
+TestCtrl.arrangeHomework = async (ctx) => {
+    ctx.body = {
+        errno: 0,
+        errmsg: '',
+        data: {}
+    }
+    let from = 0;
+    let { num, page, start_time, end_time, school_id } = ctx.query;
+    if (num) {
+        num = num ? num : 0;
+    }
+    if (page) {
+        from = (page - 1) * num;
+    }
+    let must = [
+        {
+            range: {
+                'task.add_time': {
+                    gte: start_time,
+                    lte: end_time
+                }
+            }
+        },
+        {
+            term: {
+                'task.type': 'homework',
+            }
+        },
+        {
+            term: {
+                policy: 1,
+            }
+        },
+    ]
+    const teacherParams = {  
+        _source: ['task.teacher._id'],
+        from: from,
+        size: num, 
+        collapse:{
+            field: 'task.teacher._id.keyword'
+        },
+        aggs: {
+            count: {
+                cardinality: {
+                    field: 'task.teacher._id.keyword'
+                }
+            }
+        },
+        query: {
+            bool: {
+                must: []
+            }
+        }
+    } 
+    if (school_id) {
+        must.push({
+            term: {
+                'task.school': school_id
+            }
+        });
+        teacherParams.query.bool.must.push({
+            term: {
+                'task.school': school_id
+            }
+        });
+    } 
+    const classParams = {  
+        _source: ['task.class._id'],
+        query: {
+            bool: {
+                must: [
+                    {
+                        term: {
+                            'task.teacher._id': ''
+                        }
+                    }
+                ],
+                must_not: []
+            },
+        },
+        collapse:{
+            field: 'task.class._id.keyword'
+        }
+    }  
+    const params = {
+        query: {
+            bool: {
+                must: [
+                    
+                ],
+                must_not: []
+            },
+        },
+        // size: 1
+    }
+    const options = {
+        url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/column_tag/_search`,
+        metch: 'POST',
+        // body: JSON.stringify(params),
+        headers: {
+            "Authorization": 'Basic ZWxhc3RpYzokUmUxMjM0NTY3OA==',
+            'Content-Type': 'application/json'
+        }
+    }
+    options.body = JSON.stringify(params);
+    const tags = await _request(options);
+    const val = tags.hits.hits[0]._source.element[1].element; 
+    let arr = [];
+    for(let item of val) {
+        for (let _itme of item.element) {
+            for(let tag of _itme.element) {
+                arr.push(tag.id);
+            }
+        }
+    }
+    const url = `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/taskquestions/_search`;
+    options.url = url;
+    options.size = 1;
+    // ctx.body.data = arr
+    // return 
+    ctx.body.data.interaction = [];
+    // params.query.bool.must = must;   
+    options.body = JSON.stringify(teacherParams);
+    const teacherlist = await _request(options);
+    // ctx.body.data = teacherlist
+    //     return
+    // ctx.body.data.data = [];
+    let Measurement_target = [];
+    for (let teacherItem of teacherlist.hits.hits) {
+        const teacher_id = teacherItem._source.task.teacher._id;
+        let _must = must.map(function (value) {
+            return value;
+        });
+        _must.push({
+            term: {
+                'task.teacher._id': teacher_id
+            }
+        });
+        _must.push({
+            match: {
+                Measurement_target: '7ad93e2ffa8e42e99c437f6ba1e65610',
+            }
+        });
+        params.query.bool.must = _must;
+        options.body = JSON.stringify(params);
+        const target = await _request(options);
+        // ctx.body.data = target
+        Measurement_target.push({
+            id: 1,
+            count: target.hits.total
+        });
+        // params.query.bool.must = params.query.bool.must.slice(0, -1);
+        // options.body = JSON.stringify(params);
+        // const all = await _request(options);
+        // const allTotal = all.hits.total;
+        // ctx.body.data.interaction = all;
+        classParams.query.bool.must[0].term['task.teacher._id'] = teacher_id;
+        options.body = JSON.stringify(classParams);
+        const classList = await _request(options);
+        ctx.body.data = classParams
+        console.log(
+            1
+        )
+        return
+        let arr_class = [];
+        for (let item of classList.hits.hits) {
+            const class_id = item._source.task.class._id;
+            let _must = must.map(function (value) {
+                return value;
+            });
+            _must.push({
+                term: {
+                    'task.class._id': class_id
+                }
+            });
+            _must.push({
+                exists: {
+                    field: 'correct',
+                }
+            });
+            params.query.bool.must = _must;
+            options.body = JSON.stringify(params);
+            const correct = await _request(options);
+            const correctTotal = correct.hits.total;
+            // ctx.body.data.interaction = correct;
+            params.query.bool.must = params.query.bool.must.slice(0, -1);
+            options.body = JSON.stringify(params);
+            const all = await _request(options);
+            const allTotal = all.hits.total;
+            let correct_prob = (correctTotal / allTotal).toFixed(2) * 100;
+            if (!allTotal) {
+                correct_prob = 0;
+            }
+            arr_class.push({
+                class_id: class_id,
+                correct: correctTotal,
+                correct_prob: correct_prob
+            });
+        }
+        let correct_prob = (correctTotal / allTotal).toFixed(2) * 100;
+        if (!allTotal) {
+            correct_prob = 0;
+        }
+        const count = teacherlist.aggregations.count.value
+        ctx.body.data.count = count;
+        ctx.body.data.totalPage = Math.ceil(count / num);
+
+        ctx.body.data.data.push({
+            teacher_id: teacher_id,
+            questions_number: 1,
+            Measurement_target: correct_prob,
+            arr_class: arr_class
+        });
+    }
+    // ctx.body.data.interaction = body;
+}
+
 const _request = (options) => {
     return new Promise((resolve, reject) => {
         request(options, function (err, response, body) {
