@@ -13,4 +13,6 @@ module.exports = (router) => {
     router.get('/api/report/admin/livenessReport', TestCtrl.livenessReport);
     // 获取师生互动相关信息接口
     router.get('/api/report/admin/teacherStudentInteraction', TestCtrl.teacherStudentInteraction);
+    // 后台端教师作业管理情况相关接口
+    router.get('/api/report/admin/teacherTaskManger', TestCtrl.teacherTaskManger);
 };
