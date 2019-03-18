@@ -27,4 +27,6 @@ module.exports = (router) => {
     router.get('/api/report/admin/classInformationCollect', TestCtrl.classInformationCollect);
     // 后台端布置作业相关接口
     router.get('/api/report/admin/arrangeHomework', TestCtrl.arrangeHomework);
+    // 后台端班级信息汇总相关接口
+    router.get('/api/report/admin/classInformationCollect', TestCtrl.classInformationCollect);
 };

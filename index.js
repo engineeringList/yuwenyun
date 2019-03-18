@@ -34,34 +34,47 @@ app.use(router.routes());
 
 // global.client = client;
 
-// var mongoose = require("mongoose");
-// var db = `mongodb://dds-uf6338efc0fe68741988-pub.mongodb.rds.aliyuncs.com:3717/yuwenyun?authSource=admin`
-// // 连接
-// const Db = mongoose.connect(db, { user: 'root', pass: 'huangkai123!@#', useNewUrlParser: true });
+var mongoose = require("mongoose");
+var db = `mongodb://dds-uf6338efc0fe68741988-pub.mongodb.rds.aliyuncs.com:3717/yuwenyun?authSource=admin`
+// 连接
+const Db = mongoose.connect(db, { user: 'root', pass: 'huangkai123!@#', useNewUrlParser: true });
 
-// var connection = mongoose.connection;
-// connection.on('connected', function () {
-//   console.log('Mongoose 连接到 example数据库');
-// })
+var connection = mongoose.connection;
+connection.on('connected', function () {
+  console.log('Mongoose 连接到 example数据库');
+})
 
-// connection.on('error', function (error) {
-//   console.log(error);
-// })
-// connection.once('open', function (callback) {
-//   // let tq = mongoose.model('taskquestions', new mongoose.Schema({
-//   //   name: String,
-//   // }))
-//   // let a = new tq({ name: '古诗文默写《 沁园春·长沙》' })
-//   // // a.save()
-//   // tq.find({ name: '古诗文默写《 沁园春·长沙》' }, function (err, d) {
-//   //   console.log(d)
-//   // })
-//   console.log('数据库启动了');
-//   app.listen(3000, () => {
-//     console.log('starting at port 3000');
-//   });
-//   // app.listen(8080, () => console.log('Express server listening on port 8080'));
-// })
+connection.on('error', function (error) {
+  console.log(error);
+})
+connection.once('open', function (callback) {
+  let school = mongoose.model('schools', new mongoose.Schema({
+    name: String,
+    // school_classess: [{ type: mongoose.Schema.Types.ObjectId, ref: 'classes' }],
+  }));
+  // let Classes = mongoose.model('Classes', new mongoose.Schema({
+  //   class_name: String
+  // }));
+  // .populate('school_classess')
+  // let teacher = mongoose.model('teachers', new mongoose.Schema({}));
+  school.find({}).populate('school_classess').exec(function(err,docs){
+     console.log(docs)
+     console.log(err)
+  })
+  // Classes.find({}).exec(function(err,docs){
+  //    console.log(docs[0])
+  // })
+  // let a = new tq({ name: '古诗文默写《 沁园春·长沙》' })
+  // // a.save()
+  // tq.find({ name: '古诗文默写《 沁园春·长沙》' }, function (err, d) {
+  //   console.log(d)
+  // })
+  // console.log('数据库启动了');
+  // app.listen(3000, () => {
+  //   console.log('starting at port 3000');
+  // });
+  // app.listen(8080, () => console.log('Express server listening on port 8080'));
+})
 
 require('./app/lib/sync.js').changeStream()
 
