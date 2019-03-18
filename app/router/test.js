@@ -3,9 +3,13 @@
 const { TestCtrl } = require('../controller');
 
 module.exports = (router) => {
+    // 后台端作业批改统计报表相关接口
     router.get('/api/report/admin/homeworkCorrect', TestCtrl.homeworkCorrect);
+    // 后台端作业批改统计报表相关接口
     router.get('/api/report/admin/homeworkCount', TestCtrl.homeworkCount);
+    // 后台端学校作业管理统计报表相关接口
     router.get('/api/report/admin/clssHomework', TestCtrl.clssHomework);
+    // 后台端作业分类统计报表相关接口
     router.get('/api/report/admin/homeworkColumn', TestCtrl.homeworkColumn);
     // 学习努力度报告相关接口
     router.get('/api/report/admin/learningReport', TestCtrl.learningReport);
