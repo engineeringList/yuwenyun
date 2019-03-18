@@ -1704,3 +1704,4 @@ TestCtrl.arrangeHomework = async (ctx) => {
 // }
 
 module.exports = TestCtrl;
+// db.getCollection('taskquestions').update({"_id": ObjectId("5c6a1c49c3be93000cc3b7b0")}, {"$set": {"question_score": 0.4}})
