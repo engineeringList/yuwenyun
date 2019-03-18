@@ -41,6 +41,7 @@ module.exports = {
 									total_score = total_score + item.score;
 								});
 							}
+							res.total_score = total_score;
 							const options = {
 								url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/yuwenyun/taskquestions/${_id}`,
 								method: 'POST',
@@ -52,7 +53,7 @@ module.exports = {
 
 							};
 							const d = await request(options);
-							// console.log(d)
+							console.log(d)
 						});
 				});
 			}

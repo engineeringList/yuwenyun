@@ -817,16 +817,17 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
         },
         {
             term: {
-                "task.type": 'homework',
+                'task.type': 'homework',
             }
         },
         {
             term: {
-                "task.class._id": class_id,
+                'task.class._id': class_id,
             }
         }
     ];
     const params = {
+        _source: ['question_score', 'total_score', 'avg'],
         query: {
             bool: {
                 must: [],
@@ -846,6 +847,14 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
                 },
             }
         },
+        script_fields: {
+            "avg": {
+                "script": {
+                    "lang": "painless",
+                    "source": "doc['question_score']"
+                }
+            },
+        },
         // script_fields: {
         //     "add_time": {
         //         "script": {
@@ -854,7 +863,7 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
         //         }
         //     },
         // },
-        size: 1
+        size: 2
     }
     const options = {
         url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/yuwenyun/taskquestions/_search`,
@@ -872,12 +881,14 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
         //         'task.class._id': class_id
         //     }
         // });
-        console.log(must)
-        ctx.body.data = must
-        return
+        // console.log(must)
+        // ctx.body.data = must
+        // return
         params.query.bool.must = must;
         options.body = JSON.stringify(params);
         const all = await _request(options);
+        // ctx.body.data = all
+        // return
         // 提交数
         params.query.bool.must_not.push({
             match: {
@@ -886,6 +897,8 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
         });
         options.body = JSON.stringify(params);
         const submit = await _request(options);
+        // ctx.body.data = submit
+        // return
         let len = all.aggregations.group_by_addTime.buckets.length;
         const submitBuckets = submit.aggregations.group_by_addTime.buckets;
         const allBuckets = all.aggregations.group_by_addTime.buckets;
@@ -904,6 +917,26 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
             }
         }
         ctx.body.data.arr = buckets;
+    } else if (type == '得分率') {
+        must.push({
+            term: {
+                question_id: '5c6a075ae5d0c0e4802c5e19'
+            }
+        })
+        params.aggs.group_by_addTime.aggs = {
+            aggregation: {
+                stats: {
+                    script: {
+                        inline: "doc['question_score'].value / doc['total_score'].value"
+                    }, 
+                }
+            },
+        };
+        params.query.bool.must = must;
+        options.body = JSON.stringify(params);
+        const all = await _request(options);
+        ctx.body.data = all.aggregations
+        ctx.body.data = all
     }
 }
 
@@ -1652,7 +1685,7 @@ TestCtrl.arrangeHomework = async (ctx) => {
             });
         }
     }
-    
+
 }
 
 // const _request = (options) => {
