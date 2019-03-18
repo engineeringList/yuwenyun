@@ -918,14 +918,14 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
         }
         ctx.body.data.arr = buckets;
     } else if (type == '得分率') {
-        must.push({
-            term: {
-                question_id: '5c6a075ae5d0c0e4802c5e19'
-            }
-        })
+        // must.push({
+        //     term: {
+        //         question_id: '5c6a075ae5d0c0e4802c5e19'
+        //     }
+        // })
         params.aggs.group_by_addTime.aggs = {
             aggregation: {
-                stats: {
+                avg: {
                     script: {
                         inline: "doc['question_score'].value / doc['total_score'].value"
                     }, 
@@ -934,9 +934,9 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
         };
         params.query.bool.must = must;
         options.body = JSON.stringify(params);
-        const all = await _request(options);
-        ctx.body.data = all.aggregations
-        ctx.body.data = all
+        const arr = await _request(options);
+        // ctx.body.data = all.aggregations
+        ctx.body.data.arr = arr.aggregations.group_by_addTime.buckets
     }
 }
 
