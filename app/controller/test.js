@@ -57,7 +57,7 @@ TestCtrl.homeworkCorrect = async (ctx) => {
         },
         aggs: {
             group_by_addTime: {
-                date_histogram:  {
+                date_histogram: {
                     script: {
                         inline: "doc['task.add_time'].value * 1000"
                     },
@@ -793,6 +793,114 @@ TestCtrl.livenessReport = async (ctx) => {
     }
 }
 
+TestCtrl.taskCompleteSituation = async (ctx) => {
+    ctx.body = {
+        errno: 0,
+        errmsg: '',
+        data: {}
+    }
+    const { class_id, start_time, end_time, cycle_type, type } = ctx.query;
+    if (!class_id || !cycle_type || !type) {
+        ctx.body.errmsg = '参数不全';
+        return
+    }
+    // const classAry = class_ids.split(',');
+    // let must_not = [];
+    let must = [
+        {
+            range: {
+                'task.add_time': {
+                    gte: start_time,
+                    lte: end_time
+                }
+            }
+        },
+        {
+            term: {
+                "task.type": 'homework',
+            }
+        },
+        {
+            term: {
+                "task.class._id": class_id,
+            }
+        }
+    ];
+    const params = {
+        query: {
+            bool: {
+                must: [],
+                should: [],
+                must_not: []
+            },
+        },
+        aggs: {
+            group_by_addTime: {
+                date_histogram: {
+                    script: {
+                        inline: "doc['task.add_time'].value * 1000"
+                    },
+                    interval: cycle_type,
+                    min_doc_count: 0,
+                },
+            }
+        },
+        script_fields: {
+            "add_time": {
+                "script": {
+                    "lang": "painless",
+                    "source": "if (doc['question_type'] == '填空题') {return 1;} else {return 2;}"
+                }
+            },
+        },
+        size: 1
+    }
+    const options = {
+        url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/taskquestions/_search`,
+        metch: 'POST',
+        // body: JSON.stringify(params),
+        headers: {
+            "Authorization": 'Basic ZWxhc3RpYzokUmUxMjM0NTY3OA==',
+            'Content-Type': 'application/json'
+        }
+    }
+    ctx.body.data.taskCompleteSituation = [];
+    if (type == '提交率') {
+        must.push({
+            term: {
+                'task.class._id': class_id
+            }
+        });
+        params.query.bool.must = must;
+        options.body = JSON.stringify(params);
+        const all = await _request(options);
+        // 提交数
+        params.query.bool.must_not.push({
+            match: {
+                status: '未答题',
+            }
+        });
+        options.body = JSON.stringify(params);
+        const submit = await _request(options);
+        let len = all.aggregations.group_by_addTime.buckets.length;
+        const submitBuckets = submit.aggregations.group_by_addTime.buckets;
+        const allBuckets = all.aggregations.group_by_addTime.buckets;
+        let buckets = [];
+        for (let i = 0; i < len; i++) {
+            if (submitBuckets[i] && allBuckets[i].doc_count) {
+                buckets.push({
+                    key: allBuckets[i].key,
+                    doc_count: (submitBuckets[i].doc_count / allBuckets[i].doc_count).toFixed(2)
+                });
+                ctx.body.data.taskCompleteSituation.push({
+                    class_id: class_id,
+                    buckets: buckets
+                })
+            }
+        }
+    }
+}
+
 TestCtrl.teacherStudentInteraction = async (ctx) => {
     ctx.body = {
         errno: 0,
@@ -832,11 +940,11 @@ TestCtrl.teacherStudentInteraction = async (ctx) => {
             }
         },
     ]
-    const teacherParams = {  
+    const teacherParams = {
         _source: ['task.teacher._id'],
         from: from,
-        size: num, 
-        collapse:{
+        size: num,
+        collapse: {
             field: 'task.teacher._id.keyword'
         },
         aggs: {
@@ -851,7 +959,7 @@ TestCtrl.teacherStudentInteraction = async (ctx) => {
                 must: []
             }
         }
-    } 
+    }
     if (school_id) {
         must.push({
             term: {
@@ -863,8 +971,8 @@ TestCtrl.teacherStudentInteraction = async (ctx) => {
                 'task.school': school_id
             }
         });
-    } 
-    const classParams = {  
+    }
+    const classParams = {
         _source: ['task.class._id'],
         query: {
             bool: {
@@ -878,15 +986,15 @@ TestCtrl.teacherStudentInteraction = async (ctx) => {
                 must_not: []
             },
         },
-        collapse:{
+        collapse: {
             field: 'task.class._id.keyword'
         }
-    }  
+    }
     const params = {
         query: {
             bool: {
                 must: [
-                    
+
                 ],
                 must_not: []
             },
@@ -1151,8 +1259,8 @@ TestCtrl.exerciseNumber = async (ctx) => {
                 'task.school': school_id
             }
         });
-    } 
-    const classParams = {  
+    }
+    const classParams = {
         _source: ['task.class._id'],
         query: {
             bool: {
@@ -1167,15 +1275,15 @@ TestCtrl.exerciseNumber = async (ctx) => {
                 }
             }
         },
-        collapse:{
+        collapse: {
             field: 'task.class._id.keyword'
         }
-    }  
+    }
     const params = {
         query: {
             bool: {
                 must: [
-                    
+
                 ],
                 must_not: []
             },
@@ -1272,8 +1380,8 @@ TestCtrl.classInformationCollect = async (ctx) => {
                 'task.school': school_id
             }
         });
-    } 
-    const classParams = {  
+    }
+    const classParams = {
         _source: ['task.class._id'],
         query: {
             bool: {
@@ -1288,15 +1396,15 @@ TestCtrl.classInformationCollect = async (ctx) => {
                 }
             }
         },
-        collapse:{
+        collapse: {
             field: 'task.class._id.keyword'
         }
-    }  
+    }
     const params = {
         query: {
             bool: {
                 must: [
-                    
+
                 ],
                 must_not: []
             },
@@ -1389,11 +1497,11 @@ TestCtrl.arrangeHomework = async (ctx) => {
             }
         },
     ]
-    const teacherParams = {  
+    const teacherParams = {
         _source: ['task.teacher._id'],
         from: from,
-        size: num, 
-        collapse:{
+        size: num,
+        collapse: {
             field: 'task.teacher._id.keyword'
         },
         aggs: {
@@ -1408,7 +1516,7 @@ TestCtrl.arrangeHomework = async (ctx) => {
                 must: []
             }
         }
-    } 
+    }
     if (school_id) {
         must.push({
             term: {
@@ -1420,8 +1528,8 @@ TestCtrl.arrangeHomework = async (ctx) => {
                 'task.school': school_id
             }
         });
-    } 
-    const classParams = {  
+    }
+    const classParams = {
         _source: ['task.class._id'],
         query: {
             bool: {
@@ -1435,15 +1543,15 @@ TestCtrl.arrangeHomework = async (ctx) => {
                 must_not: []
             },
         },
-        collapse:{
+        collapse: {
             field: 'task.class._id.keyword'
         }
-    }  
+    }
     const params = {
         query: {
             bool: {
                 must: [
-                    
+
                 ],
                 must_not: []
             },
@@ -1461,11 +1569,11 @@ TestCtrl.arrangeHomework = async (ctx) => {
     }
     options.body = JSON.stringify(params);
     const tags = await _request(options);
-    const val = tags.hits.hits[0]._source.element[1].element; 
+    const val = tags.hits.hits[0]._source.element[1].element;
     let arr = [];
-    for(let item of val) {
+    for (let item of val) {
         for (let _itme of item.element) {
-            for(let tag of _itme.element) {
+            for (let tag of _itme.element) {
                 arr.push(tag.id);
             }
         }
