@@ -22,6 +22,7 @@
     "koa-morgan": "^1.0.1",
     "koa-router": "^7.4.0",
     "mongoose": "^5.4.19",
+    "mongoose-trigger": "^1.0.1",
     "request": "^2.88.0"
   }
 }

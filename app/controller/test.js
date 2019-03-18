@@ -1,7 +1,7 @@
 'use strict';
 
 const TestCtrl = {};
-const request = require('request');
+const _request = require('../lib/req');
 
 // let username = 'elastic'
 // let password = 'Re12345678'
@@ -840,23 +840,24 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
                     script: {
                         inline: "doc['task.add_time'].value * 1000"
                     },
+                    time_zone: '+08:00',
                     interval: cycle_type,
                     min_doc_count: 0,
                 },
             }
         },
-        script_fields: {
-            "add_time": {
-                "script": {
-                    "lang": "painless",
-                    "source": "if (doc['question_type'] == '填空题') {return 1;} else {return 2;}"
-                }
-            },
-        },
+        // script_fields: {
+        //     "add_time": {
+        //         "script": {
+        //             "lang": "painless",
+        //             "source": "if (doc['question_type'] == '填空题') {return 1;} else {return 2;}"
+        //         }
+        //     },
+        // },
         size: 1
     }
     const options = {
-        url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/taskquestions/_search`,
+        url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/yuwenyun/taskquestions/_search`,
         metch: 'POST',
         // body: JSON.stringify(params),
         headers: {
@@ -864,13 +865,16 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
             'Content-Type': 'application/json'
         }
     }
-    ctx.body.data.taskCompleteSituation = [];
+    ctx.body.data = {};
     if (type == '提交率') {
-        must.push({
-            term: {
-                'task.class._id': class_id
-            }
-        });
+        // must.push({
+        //     term: {
+        //         'task.class._id': class_id
+        //     }
+        // });
+        console.log(must)
+        ctx.body.data = must
+        return
         params.query.bool.must = must;
         options.body = JSON.stringify(params);
         const all = await _request(options);
@@ -890,14 +894,16 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
             if (submitBuckets[i] && allBuckets[i].doc_count) {
                 buckets.push({
                     key: allBuckets[i].key,
-                    doc_count: (submitBuckets[i].doc_count / allBuckets[i].doc_count).toFixed(2)
+                    doc_count: (submitBuckets[i].doc_count / allBuckets[i].doc_count).toFixed(2) * 100
                 });
-                ctx.body.data.taskCompleteSituation.push({
-                    class_id: class_id,
-                    buckets: buckets
-                })
+            } else {
+                buckets.push({
+                    key: allBuckets[i].key,
+                    doc_count: 0
+                });
             }
         }
+        ctx.body.data.arr = buckets;
     }
 }
 
@@ -1559,7 +1565,7 @@ TestCtrl.arrangeHomework = async (ctx) => {
     }
     const options = {
         url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/column_tag/_search`,
-        metch: 'POST',
+        method: 'POST',
         headers: {
             "Authorization": 'Basic ZWxhc3RpYzokUmUxMjM0NTY3OA==',
             'Content-Type': 'application/json'
@@ -1649,19 +1655,19 @@ TestCtrl.arrangeHomework = async (ctx) => {
     
 }
 
-const _request = (options) => {
-    return new Promise((resolve, reject) => {
-        request(options, function (err, response, body) {
-            let results = {};
-            if (err) {
-                results.code = 0;
-                results.msg = '引擎出错！';
-                reject(results);
-            }
-            body = JSON.parse(body);
-            return resolve(body)
-        })
-    });
-}
+// const _request = (options) => {
+//     return new Promise((resolve, reject) => {
+//         request(options, function (err, response, body) {
+//             let results = {};
+//             if (err) {
+//                 results.code = 0;
+//                 results.msg = '引擎出错！';
+//                 reject(results);
+//             }
+//             body = JSON.parse(body);
+//             return resolve(body)
+//         })
+//     });
+// }
 
 module.exports = TestCtrl;
