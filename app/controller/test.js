@@ -1705,3 +1705,5 @@ TestCtrl.arrangeHomework = async (ctx) => {
 
 module.exports = TestCtrl;
 // db.getCollection('taskquestions').update({"_id": ObjectId("5c6a1c49c3be93000cc3b7b0")}, {"$set": {"question_score": 0.4}})
+
+// http://localhost:3000/api/report/admin/taskCompleteSituation?class_id=5c219368e5d0c040ac2642f1&type=得分率&cycle_type=week
