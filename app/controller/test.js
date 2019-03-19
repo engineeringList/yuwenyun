@@ -292,6 +292,97 @@ TestCtrl.homeworkCorrect = async (ctx) => {
     // console.log(response.hits.hits)
 }
 
+TestCtrl.teacherInformationCollect = async (ctx) => {
+    ctx.body = {
+        errno: 0,
+        errmsg: '',
+        data: {}
+    }
+    const { teacher_name } = ctx.query;
+    if (!teacher_name) {
+        ctx.body.errmsg = '参数不全';
+        return
+    }
+    const params = {
+        // _source: ["status", "test1"],
+        query: {
+            bool: {
+                filter: [],
+                must: [
+                    {
+                        match: {
+                            'task.teacher.name': teacher_name,
+                        }
+                    }
+                ],
+                must_not: []
+            },
+        },
+        aggs: {},
+        size: 12
+    }
+    const options = {
+        url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/yuwenyun/taskquestions/_search`,
+        metch: 'POST',
+        // body: JSON.stringify(params),
+        headers: {
+            "Authorization": 'Basic ZWxhc3RpYzokUmUxMjM0NTY3OA==',
+            'Content-Type': 'application/json'
+        }
+    }
+    ctx.body.data = {};
+    // 布置作业次数
+    params.aggs = {
+        count: {
+            cardinality: {
+                field: 'task.id.keyword'
+            }
+        }
+    }
+    options.body = JSON.stringify(params);
+    let body = await _request(options);
+    ctx.body.data.task_time = body.aggregations.count.value;
+    // 布置作业题数统计
+    ctx.body.data.task_number = body.hits.total;
+    // 手工批改作业题数
+    params.query.bool.must.push({
+        match: {
+            status: '已批改'
+        }
+    });
+    options.body = JSON.stringify(params);
+    body = await _request(options);
+    // ctx.body.data = body;
+    // 手工批改作业题数
+    ctx.body.data.manual_task_number = body.hits.total;
+    // 提交总数
+    params.query.bool.must = params.query.bool.must.slice(0, -1);
+    params.query.bool.must_not.push({
+        match: {
+            status: '未答题'
+        }
+    });
+    options.body = JSON.stringify(params);
+    body = await _request(options);
+    const submitTotal = body.hits.total;
+    ctx.body.data.manual_correct_rate = ((ctx.body.data.manual_task_number / submitTotal) * 100).toFixed(2);
+    delete params.query.bool.must_not;
+    params.query.bool.must.push({
+        match: {
+            status: '已批改'
+        }
+    });
+    params.query.bool.must.push({
+        exists: {
+            field: 'correct'
+        }
+    });
+    options.body = JSON.stringify(params);
+    body = await _request(options);
+    ctx.body.data.manual_postil_rate = ((body.hits.total / submitTotal) * 100).toFixed(2);
+    // ctx.body.data = body
+}
+
 TestCtrl.clssHomework = async (ctx) => {
     ctx.body = {
         errno: 0,
@@ -928,7 +1019,7 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
                 avg: {
                     script: {
                         inline: "doc['question_score'].value / doc['total_score'].value"
-                    }, 
+                    },
                 }
             },
         };

@@ -41,7 +41,7 @@ const Db = mongoose.connect(db, { user: 'root', pass: 'huangkai123!@#', useNewUr
 
 var connection = mongoose.connection;
 connection.on('connected', function () {
-  console.log('Mongoose 连接到 example数据库');
+  console.log('Mongoose 连接成功');
 })
 
 connection.on('error', function (error) {
@@ -57,10 +57,10 @@ connection.once('open', function (callback) {
   // }));
   // .populate('school_classess')
   // let teacher = mongoose.model('teachers', new mongoose.Schema({}));
-  school.find({}).populate('school_classess').exec(function(err,docs){
-     console.log(docs)
-     console.log(err)
-  })
+  // school.find({}).populate('school_classess').exec(function(err,docs){
+  //    console.log(docs)
+  //    console.log(err)
+  // })
   // Classes.find({}).exec(function(err,docs){
   //    console.log(docs[0])
   // })

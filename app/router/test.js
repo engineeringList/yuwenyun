@@ -5,6 +5,8 @@ const { TestCtrl } = require('../controller');
 module.exports = (router) => {
     // 后台端作业批改统计报表相关接口
     router.get('/api/report/admin/homeworkCorrect', TestCtrl.homeworkCorrect);
+    // 后台端教师信息汇总相关接口
+    router.get('/api/report/admin/teacherInformationCollect', TestCtrl.teacherInformationCollect);
     // 后台端作业批改统计报表相关接口
     router.get('/api/report/admin/homeworkCount', TestCtrl.homeworkCount);
     // 后台端学校作业管理统计报表相关接口
@@ -17,7 +19,7 @@ module.exports = (router) => {
     router.get('/api/report/admin/taskCompleteSituation', TestCtrl.taskCompleteSituation);
     // 后台端学生活跃度相关接口
     router.get('/api/report/admin/livenessReport', TestCtrl.livenessReport);
-    // 获取师生互动相关信息接口
+    // 后台端师生互动报表相关接口
     router.get('/api/report/admin/teacherStudentInteraction', TestCtrl.teacherStudentInteraction);
     // 后台端教师作业管理情况相关接口
     router.get('/api/report/admin/teacherTaskManger', TestCtrl.teacherTaskManger);
