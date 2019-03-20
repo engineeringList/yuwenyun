@@ -219,61 +219,6 @@ TestCtrl.homeworkCorrect = async (ctx) => {
             });
         }
     }
-
-    // const body = await _request(options)
-    // ctx.body = body;
-    // const response = await client.search({
-    //     index: 'yuwenyun',
-    //     body: {
-    //         query: {
-    //             bool: {
-    //                 must: [{
-    //                     range: {
-    //                         add_time: {
-    //                             gte: 1550457918,
-    //                             lte: 1550457938
-    //                         }
-    //                     }
-    //                 },
-    //                 {
-    //                     term: {
-    //                         policy: 1
-    //                     }
-    //                 }]
-    //             }
-    //         },
-    //         aggs: {
-    //             group_by_addTime: {
-    //                 date_histogram: {
-    //                     field: "add_time",
-    //                     interval: "month"
-    //                 },
-    //             }
-    //         }
-    //     },
-    //     size: 10
-    // });
-    // const a = await client.create({
-    //     index: 'yuwenyun',
-    //     type: 'taskquestions',
-    //     id: '1',
-    //     body: {
-    //         teacher_id: '1',
-    //         student_id: '1',
-    //         question_id: 1,
-    //         taskType: 'homework',
-    //         add_time: 1550457929,
-    //         policy: 1,
-    //         status: '已批改'
-    //     }
-    // });
-    // const a = await client.deleteByQuery({
-    //     index: '.monitoring-es-6-2019.03.07',
-    //     q: ''
-    // });
-    // console.log(a)
-    // console.log(response)
-    // console.log(response.hits.hits)
 }
 
 TestCtrl.teacherInformationCollect = async (ctx) => {
@@ -412,7 +357,9 @@ TestCtrl.clssHomework = async (ctx) => {
         aggs: {
             group_by_addTime: {
                 date_histogram: {
-                    field: 'task.add_time',
+                    script: {
+                        inline: "doc['task.add_time'].value * 1000"
+                    },
                     interval: cycle_type,
                     min_doc_count: 0
                 },
@@ -443,8 +390,8 @@ TestCtrl.clssHomework = async (ctx) => {
                 }
             });
             _must.push({
-                match: {
-                    status: '已批改',
+                term: {
+                    'status.keyword': '已批改',
                 }
             });
             params.query.bool.must = _must;
@@ -455,8 +402,8 @@ TestCtrl.clssHomework = async (ctx) => {
             // 提交总数
             params.query.bool.must = params.query.bool.must.slice(0, -1);
             params.query.bool.must_not.push({
-                match: {
-                    status: '未答题',
+                term: {
+                    'status.keyword': '未答题',
                 }
             });
             options.body = JSON.stringify(params);
@@ -488,7 +435,7 @@ TestCtrl.clssHomework = async (ctx) => {
         params.aggs.group_by_addTime.aggs = {
             homework_count: {
                 cardinality: {
-                    field: "task.id.keyword"
+                    field: 'task.id.keyword'
                 }
             }
         }
