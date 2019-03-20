@@ -34,8 +34,6 @@ TestCtrl.homeworkCorrect = async (ctx) => {
                 'task.add_time': {
                     gte: start_time,
                     lte: end_time
-                    // gte: 1250470402,
-                    // lte: 1850470412
                 }
             }
         },
@@ -56,7 +54,7 @@ TestCtrl.homeworkCorrect = async (ctx) => {
         // }
     ]
     const params = {
-        // _source: ["status", "test1"],
+        _source: ["policy", "task.teacher", 'status'],
         query: {
             bool: {
                 must: [],
@@ -73,30 +71,9 @@ TestCtrl.homeworkCorrect = async (ctx) => {
                     // format: 'yyyy-MM-dd HH',
                     min_doc_count: 0,
                 }
-                // {
-                //     field: 'task.add_time',
-                //     interval: cycle_type,
-                //     // format: 'yyyy-MM-dd',
-                //     min_doc_count: 0,
-                //     // "offset": "+1m"
-                //     // keyed: true
-                // },
             }
         },
-        // script_fields: {
-        //     "add_time": {
-        //         "script": {
-        //             "lang": "painless",
-        //             "source": "doc['task.add_time'].value * 1000"
-        //         }
-        //     },
-        // },
-        // "script_fields" : {
-        //     "test1" : {
-        //         "script" : "params['_source']['task.add_time']"
-        //     }
-        // },
-        size: 0
+        // size: 0
     }
     const options = {
         url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/taskquestions/_search`,
@@ -110,8 +87,8 @@ TestCtrl.homeworkCorrect = async (ctx) => {
     ctx.body.data.correct = [];
     if (type == '手工批改数') {
         must.push({
-            match: {
-                status: "已批改",
+            term: {
+                'status.keyword': '已批改',
             }
         });
         for (let teacher_id of teacherAry) {
@@ -131,7 +108,6 @@ TestCtrl.homeworkCorrect = async (ctx) => {
             ctx.body.data.correct.push({
                 teacher_id: teacher_id,
                 buckets: body.aggregations.group_by_addTime.buckets
-                // buckets: body
             })
         }
     } else if (type == '批改率') {
@@ -1039,6 +1015,238 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
     }
 }
 
+TestCtrl.abilityReport = async (ctx) => {
+    ctx.body = {
+        errno: 0,
+        errmsg: '',
+        data: {}
+    }
+    const {
+        parent_id,
+        column_tag,
+        start_time,
+        end_time,
+        cycle_type,
+        params_id,
+        type
+    } = ctx.query;
+    // if (!column_tag || !params_id || !type) {
+    //     ctx.body.errmsg = '参数不全';
+    //     return
+    // }
+    const columnAry = column_tag.split(',');
+    const idAry = params_id.split(',');
+    let must = [
+        {
+            range: {
+                'task.add_time': {
+                    gte: start_time,
+                    lte: end_time
+                }
+            }
+        }
+    ];
+    const params = {
+        // _source: ['question_score', 'total_score'],
+        query: {
+            bool: {
+                must: [],
+                should: [],
+                must_not: [],
+                minimum_should_match: 1
+            }
+        },
+        aggs: {
+            aggregation: {
+                avg: {
+                    script: {
+                        inline: "doc['question_score'].value / doc['total_score'].value"
+                    }
+                }
+            },
+        },
+        size: 2
+    }
+    const options = {
+        url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/yuwenyun/taskquestions/_search`,
+        metch: 'POST',
+        // body: JSON.stringify(params),
+        headers: {
+            "Authorization": 'Basic ZWxhc3RpYzokUmUxMjM0NTY3OA==',
+            'Content-Type': 'application/json'
+        }
+    }
+    if (parent_id) {
+        params.query.bool.should.push({
+            query_string: {
+                default_field: 'column_tag',
+                query: `*${parent_id}*`
+            }
+        });
+        params.query.bool.minimum_should_match = 2;
+    }
+    ctx.body.data = [];
+    for (let id of idAry) {
+        if (type == 'person') {
+            must.push({
+                term: {
+                    'task.student._id': id
+                }
+            });
+        } else if (type == 'class') {
+            must.push({
+                term: {
+                    'task.class._id': id
+                }
+            });
+        } else if (type == 'school') {
+            must.push({
+                term: {
+                    'task.school._id': id
+                }
+            });
+        }
+        let data = [];
+        for (let tag of columnAry) {
+            params.query.bool.should.push({
+                query_string: {
+                    default_field: 'column_tag',
+                    query: `*${tag}*`
+                }
+            });
+            let _must = must.map(function (value) {
+                return value;
+            });
+            params.query.bool.must = _must;
+            options.body = JSON.stringify(params);
+            const body = await _request(options);
+            params.query.bool.should = params.query.bool.should.slice(0, -1);
+            data.push({
+                id: tag,
+                value: (body.aggregations.aggregation.value * 100).toFixed(2)
+            })
+        }
+        ctx.body.data.push({
+            id: id,
+            data: data
+        });
+    }
+}
+
+TestCtrl.schoolInformationCollect = async (ctx) => {
+    ctx.body = {
+        errno: 0,
+        errmsg: '',
+        data: {}
+    }
+    const {
+        page, num, school_name
+    } = ctx.query;
+    // if (!column_tag || !params_id || !type) {
+    //     ctx.body.errmsg = '参数不全';
+    //     return
+    // }
+    const school = await db.collection('schools').find({}).toArray();
+    return
+    const columnAry = column_tag.split(',');
+    const idAry = params_id.split(',');
+    let must = [
+        {
+            range: {
+                'task.add_time': {
+                    gte: start_time,
+                    lte: end_time
+                }
+            }
+        }
+    ];
+    const params = {
+        // _source: ['question_score', 'total_score'],
+        query: {
+            bool: {
+                must: [],
+                should: [],
+                must_not: [],
+                minimum_should_match: 1
+            }
+        },
+        aggs: {
+            aggregation: {
+                avg: {
+                    script: {
+                        inline: "doc['question_score'].value / doc['total_score'].value"
+                    }
+                }
+            },
+        },
+        size: 2
+    }
+    const options = {
+        url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/yuwenyun/taskquestions/_search`,
+        metch: 'POST',
+        // body: JSON.stringify(params),
+        headers: {
+            "Authorization": 'Basic ZWxhc3RpYzokUmUxMjM0NTY3OA==',
+            'Content-Type': 'application/json'
+        }
+    }
+    if (parent_id) {
+        params.query.bool.should.push({
+            query_string: {
+                default_field: 'column_tag',
+                query: `*${parent_id}*`
+            }
+        });
+        params.query.bool.minimum_should_match = 2;
+    }
+    ctx.body.data = [];
+    for (let id of idAry) {
+        if (type == 'person') {
+            must.push({
+                term: {
+                    'task.student._id': id
+                }
+            });
+        } else if (type == 'class') {
+            must.push({
+                term: {
+                    'task.class._id': id
+                }
+            });
+        } else if (type == 'school') {
+            must.push({
+                term: {
+                    'task.school._id': id
+                }
+            });
+        }
+        let data = [];
+        for (let tag of columnAry) {
+            params.query.bool.should.push({
+                query_string: {
+                    default_field: 'column_tag',
+                    query: `*${tag}*`
+                }
+            });
+            let _must = must.map(function (value) {
+                return value;
+            });
+            params.query.bool.must = _must;
+            options.body = JSON.stringify(params);
+            const body = await _request(options);
+            params.query.bool.should = params.query.bool.should.slice(0, -1);
+            data.push({
+                id: tag,
+                value: (body.aggregations.aggregation.value * 100).toFixed(2)
+            })
+        }
+        ctx.body.data.push({
+            id: id,
+            data: data
+        });
+    }
+}
+
 TestCtrl.homeworkRate = async (ctx) => {
     ctx.body = {
         errno: 0,
@@ -1070,7 +1278,7 @@ TestCtrl.homeworkRate = async (ctx) => {
     }
     let arr = [];
     const school = await db.collection('schools').find(schoolParams).toArray();
-    for(let item of school) {
+    for (let item of school) {
         for (let grade of item.school_classess) {
             if (grade.oid) {
                 arr.push(grade.oid);
@@ -1078,7 +1286,7 @@ TestCtrl.homeworkRate = async (ctx) => {
         }
     }
     const classes = await db.collection('classes').find(
-        {_id: {$in: arr}},
+        { _id: { $in: arr } },
         { limit: parseInt(num), skip: parseInt(from) }
     ).toArray();
     // console.log(classes)

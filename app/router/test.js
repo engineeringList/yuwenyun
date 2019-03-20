@@ -33,4 +33,8 @@ module.exports = (router) => {
     router.get('/api/report/admin/classInformationCollect', TestCtrl.classInformationCollect);
     // 后台端作业得分率报表相关接口
     router.get('/api/report/admin/homeworkRate', TestCtrl.homeworkRate);
+    // 能力模型报告相关接口
+    router.get('/api/report/admin/abilityReport', TestCtrl.abilityReport);
+    // 后台端学校信息汇总相关接口
+    router.get('/api/report/admin/schoolInformationCollect', TestCtrl.schoolInformationCollect);
 };
