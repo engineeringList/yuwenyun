@@ -1139,113 +1139,118 @@ TestCtrl.schoolInformationCollect = async (ctx) => {
         errmsg: '',
         data: {}
     }
-    const {
+    let {
         page, num, school_name
     } = ctx.query;
     // if (!column_tag || !params_id || !type) {
     //     ctx.body.errmsg = '参数不全';
     //     return
     // }
-    const school = await db.collection('schools').find({
-        school_name: { $regex: `上海市` }
-    }).toArray();
-    ctx.body.data = school;
-    return
-    const columnAry = column_tag.split(',');
-    const idAry = params_id.split(',');
-    let must = [
-        {
-            range: {
-                'task.add_time': {
-                    gte: start_time,
-                    lte: end_time
-                }
-            }
-        }
-    ];
-    const params = {
-        // _source: ['question_score', 'total_score'],
-        query: {
-            bool: {
-                must: [],
-                should: [],
-                must_not: [],
-                minimum_should_match: 1
-            }
-        },
-        aggs: {
-            aggregation: {
-                avg: {
-                    script: {
-                        inline: "doc['question_score'].value / doc['total_score'].value"
-                    }
-                }
-            },
-        },
-        size: 2
+    num = num ? num : 10;
+    let from = 0;
+    if (page) {
+        from = (page - 1) * num;
     }
     const options = {
         url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/yuwenyun/taskquestions/_search`,
         metch: 'POST',
-        // body: JSON.stringify(params),
         headers: {
             "Authorization": 'Basic ZWxhc3RpYzokUmUxMjM0NTY3OA==',
             'Content-Type': 'application/json'
         }
     }
-    if (parent_id) {
-        params.query.bool.should.push({
-            query_string: {
-                default_field: 'column_tag',
-                query: `*${parent_id}*`
-            }
-        });
-        params.query.bool.minimum_should_match = 2;
+    let findParams = {};
+    if (school_name) {
+        findParams = { school_name: { $regex: school_name } }
     }
-    ctx.body.data = [];
-    for (let id of idAry) {
-        if (type == 'person') {
-            must.push({
-                term: {
-                    'task.student._id': id
-                }
-            });
-        } else if (type == 'class') {
-            must.push({
-                term: {
-                    'task.class._id': id
-                }
-            });
-        } else if (type == 'school') {
-            must.push({
-                term: {
-                    'task.school._id': id
-                }
-            });
+    const schools = await db.collection('schools').find(
+        findParams,
+        { limit: parseInt(num), skip: parseInt(from) }
+    ).toArray();
+    const count = await db.collection('schools').find(
+        findParams
+    ).count();
+    ctx.body.data.data = [];
+    ctx.body.data.count = count;
+    ctx.body.data.totalPage = Math.ceil(count / num);
+    for (let school of schools) {
+        let arr = [];
+        for (let grade of school.school_classess) {
+            arr.push(grade.oid)
         }
-        let data = [];
-        for (let tag of columnAry) {
-            params.query.bool.should.push({
-                query_string: {
-                    default_field: 'column_tag',
-                    query: `*${tag}*`
+        const student = await db.collection('classes')
+            .aggregate(
+            [
+                { '$match': { _id: { $in: arr } } },
+                {
+                    $project: {
+                        tags_count: { $size: '$class_students' }
+                    }
+                },
+                { $group: { _id: null, sum: { $sum: '$tags_count' } } }
+            ]
+            ).toArray();
+        const params = {
+            query: {
+                bool: {
+                    must: [
+                        {
+                            term: {
+                                'task.type.keyword': 'homework'
+                            }
+                        },
+                        {
+                            term: {
+                                'task.school._id': school._id
+                            }
+                        }
+                    ],
+                    must_not: [],
                 }
-            });
-            let _must = must.map(function (value) {
-                return value;
-            });
-            params.query.bool.must = _must;
-            options.body = JSON.stringify(params);
-            const body = await _request(options);
-            params.query.bool.should = params.query.bool.should.slice(0, -1);
-            data.push({
-                id: tag,
-                value: (body.aggregations.aggregation.value * 100).toFixed(2)
-            })
+            },
+            aggs: {
+                count: {
+                    cardinality: {
+                        field: 'task.id.keyword'
+                    }
+                }
+            },
+            size: 0
         }
-        ctx.body.data.push({
-            id: id,
-            data: data
+        // 布置作业数
+        options.body = JSON.stringify(params);
+        let body = await _request(options);
+        const questions_task = body.aggregations.count.value;
+        // 学生答题
+        const _params = {
+            query: {
+                bool: {
+                    must: [
+                        {
+                            term: {
+                                'task.school._id': school._id
+                            }
+                        }
+                    ],
+                    must_not: [
+                        {
+                            term: {
+                                'status.keyword': '未答题'
+                            }
+                        }
+                    ],
+                }
+            },
+            size: 0
+        }
+        options.body = JSON.stringify(_params);
+        const student_answer = body.hits.total;
+        ctx.body.data.data.push({
+            school_name: school.school_name,
+            teacher_number: school.school_teachers.length,
+            student_number: student[0].sum,
+            questions_task: questions_task,
+            student_answer: student_answer
         });
     }
 }
