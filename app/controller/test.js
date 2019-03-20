@@ -2,6 +2,14 @@
 
 const TestCtrl = {};
 const _request = require('../lib/req');
+const { School, Classes } = require('../models');
+const mongoose = require('mongoose')
+const mongodb = require('mongodb')
+var mongoUtil = require('../lib/mongoUtil');
+var MongoClient = require('mongodb').MongoClient;
+var uri = `mongodb://root:huangkai123!%40#@dds-uf6338efc0fe68741988-pub.mongodb.rds.aliyuncs.com:3717/yuwenyun?authSource=admin`
+
+// db.collection( 'users' ).find();
 
 // let username = 'elastic'
 // let password = 'Re12345678'
@@ -1019,7 +1027,7 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
                 avg: {
                     script: {
                         inline: "doc['question_score'].value / doc['total_score'].value"
-                    },
+                    }
                 }
             },
         };
@@ -1029,6 +1037,145 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
         // ctx.body.data = all.aggregations
         ctx.body.data.arr = arr.aggregations.group_by_addTime.buckets
     }
+}
+
+TestCtrl.homeworkRate = async (ctx) => {
+    ctx.body = {
+        errno: 0,
+        errmsg: '',
+        data: {}
+    }
+    let { school_id, start_time, end_time, page, num } = ctx.query;
+    // if (!start_time || !end_time) {
+    //     ctx.body.errmsg = '参数不全';
+    //     return
+    // }
+    let from = 0;
+    num = num ? num : 10;
+    if (page) {
+        from = (page - 1) * num;
+    }
+    const options = {
+        url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/yuwenyun/taskquestions/_search`,
+        metch: 'POST',
+        // body: JSON.stringify(params),
+        headers: {
+            "Authorization": 'Basic ZWxhc3RpYzokUmUxMjM0NTY3OA==',
+            'Content-Type': 'application/json'
+        }
+    }
+    const schoolParams = {};
+    if (school_id) {
+        schoolParams._id = mongodb.ObjectId(school_id)
+    }
+    let arr = [];
+    const school = await db.collection('schools').find(schoolParams).toArray();
+    for(let item of school) {
+        for (let grade of item.school_classess) {
+            if (grade.oid) {
+                arr.push(grade.oid);
+            }
+        }
+    }
+    const classes = await db.collection('classes').find(
+        {_id: {$in: arr}},
+        { limit: parseInt(num), skip: parseInt(from) }
+    ).toArray();
+    // console.log(classes)
+    for (let grade of classes) {
+        const _school = await db.collection('schools').findOne({
+            'school_classess.$id': mongodb.ObjectId(grade._id)
+        });
+        // console.log(school)
+        // console.log(grade._id)
+        grade.school_name = _school.school_name;
+        const params = {
+            query: {
+                bool: {
+                    must: [
+                        {
+                            range: {
+                                'task.add_time': {
+                                    gte: start_time,
+                                    lte: end_time
+                                }
+                            }
+                        },
+                        {
+                            match: {
+                                status: '已批改',
+                            }
+                        },
+                        {
+                            term: {
+                                'task.class._id': grade._id,
+                            }
+                        }
+                    ],
+                    should: [
+                        {
+                            bool: {
+                                must: [{
+                                    match: {
+                                        'task.type': 'non_task'
+                                    }
+                                }],
+                                must_not: [{
+                                    term: {
+                                        policy: 1
+                                    }
+                                }]
+                            }
+                        },
+                        {
+                            bool: {
+                                must: {
+                                    term: {
+                                        policy: 1
+                                    }
+                                },
+                                must_not: {
+                                    match: {
+                                        'task.type': 'non_task'
+                                    }
+                                }
+                            }
+                        },
+                    ],
+                    must_not: [],
+                    minimum_should_match: 1
+                    // must: [{
+                    //     term: {
+                    //         'task.type': 'non_task'
+                    //     }
+                    // }],
+                    // must_not: {
+                    //     term: {
+                    //         'policy': 1
+                    //     }
+                    // }
+                },
+            },
+            // _source: ['policy'],
+            aggs: {
+                aggregation: {
+                    avg: {
+                        script: {
+                            inline: "doc['question_score'].value / doc['total_score'].value"
+                        }
+                    }
+                },
+            },
+            size: 0
+        }
+        options.body = JSON.stringify(params);
+        const score_rate = await _request(options);
+        grade.score_rate = score_rate.aggregations.aggregation.value;
+    }
+    const count = arr.length
+    ctx.body.data.count = count;
+    ctx.body.data.totalPage = Math.ceil(count / num);
+    ctx.body.data.data = classes;
 }
 
 TestCtrl.teacherStudentInteraction = async (ctx) => {

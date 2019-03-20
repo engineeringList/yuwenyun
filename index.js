@@ -33,7 +33,7 @@ app.use(router.routes());
 // });
 
 // global.client = client;
-
+// var utils = require('mongoose-dbref').utils;
 var mongoose = require("mongoose");
 var db = `mongodb://dds-uf6338efc0fe68741988-pub.mongodb.rds.aliyuncs.com:3717/yuwenyun?authSource=admin`
 // 连接
@@ -49,18 +49,27 @@ connection.on('error', function (error) {
 })
 connection.once('open', function (callback) {
   let school = mongoose.model('schools', new mongoose.Schema({
-    name: String,
-    // school_classess: [{ type: mongoose.Schema.Types.ObjectId, ref: 'classes' }],
+    school_memo: String,
+    school_classess: [{ 
+      $ref: String,
+      $id: String,
+      $db: String
+    }],
   }));
+  mongoose.set('debug', true);
   // let Classes = mongoose.model('Classes', new mongoose.Schema({
   //   class_name: String
   // }));
   // .populate('school_classess')
   // let teacher = mongoose.model('teachers', new mongoose.Schema({}));
-  // school.find({}).populate('school_classess').exec(function(err,docs){
-  //    console.log(docs)
-  //    console.log(err)
-  // })
+  school.find({}).limit(1).skip(1).exec(function (err, docs) {
+    // console.log(docs.school_classess[0])
+    // utils.fetch(Db, docs.school_classess[0],
+    //   function (err, doc) {
+    //     if (err) throw err;
+    //     console.log("Order = " + doc);
+    //   });
+  })
   // Classes.find({}).exec(function(err,docs){
   //    console.log(docs[0])
   // })
@@ -90,6 +99,10 @@ require('./app/lib/sync.js').changeStream()
 //   console.log("数据库连接成功");
 // });
 
-app.listen(3000, () => {
-  console.log('starting at port 3000');
-});
+var mongoUtil = require('./app/lib/mongoUtil');
+
+mongoUtil.connectToServer( function( err ) {
+  app.listen(3000, () => {
+    console.log('starting at port 3000');
+  });
+} );

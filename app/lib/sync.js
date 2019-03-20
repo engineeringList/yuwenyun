@@ -8,6 +8,7 @@ module.exports = {
 			function (client) {
 				console.log('Ready to watch database');
 				let db = client.db('yuwenyun');
+				global.db = db;
 				let streams = db.collection('taskquestions').watch([
 					{
 						$match: {
