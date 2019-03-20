@@ -429,7 +429,7 @@ TestCtrl.clssHomework = async (ctx) => {
             'Content-Type': 'application/json'
         }
     }
-    ctx.body.data.class = [];
+    ctx.body.data.data = [];
     if (type == '批改率') {
         let ratify, all;
         for (let class_id of classAry) {
@@ -479,7 +479,7 @@ TestCtrl.clssHomework = async (ctx) => {
                     });
                 }
             }
-            ctx.body.data.class.push({
+            ctx.body.data.data.push({
                 class_id: class_id,
                 arr: buckets
             })
@@ -506,7 +506,7 @@ TestCtrl.clssHomework = async (ctx) => {
             const body = await _request(options);
             // ctx.body.data.correct = body
             // ctx.body.data.correct = params
-            ctx.body.data.class.push({
+            ctx.body.data.data.push({
                 class_id: class_id,
                 arr: body.aggregations.group_by_addTime.buckets
             })
