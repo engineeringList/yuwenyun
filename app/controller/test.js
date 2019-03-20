@@ -73,7 +73,7 @@ TestCtrl.homeworkCorrect = async (ctx) => {
                 }
             }
         },
-        // size: 0
+        size: 0
     }
     const options = {
         url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/taskquestions/_search`,
@@ -84,7 +84,7 @@ TestCtrl.homeworkCorrect = async (ctx) => {
             'Content-Type': 'application/json'
         }
     }
-    ctx.body.data.correct = [];
+    ctx.body.data.data = [];
     if (type == '手工批改数') {
         must.push({
             term: {
@@ -94,12 +94,12 @@ TestCtrl.homeworkCorrect = async (ctx) => {
         for (let teacher_id of teacherAry) {
             let _must = must.map(function (value) {
                 return value;
-            })
+            });
             _must.push({
                 term: {
                     'task.teacher._id': teacher_id
                 }
-            })
+            });
             params.query.bool.must = _must;
             options.body = JSON.stringify(params);
             const body = await _request(options);
@@ -107,7 +107,7 @@ TestCtrl.homeworkCorrect = async (ctx) => {
             // ctx.body.data.correct = params
             ctx.body.data.correct.push({
                 teacher_id: teacher_id,
-                buckets: body.aggregations.group_by_addTime.buckets
+                arr: body.aggregations.group_by_addTime.buckets
             })
         }
     } else if (type == '批改率') {
@@ -139,34 +139,31 @@ TestCtrl.homeworkCorrect = async (ctx) => {
             });
             options.body = JSON.stringify(params);
             all = await _request(options);
+            // ctx.body = all
+            // return
             params.query.bool.must_not = [];
             let len = all.aggregations.group_by_addTime.buckets.length;
             const ratifyBuckets = ratify.aggregations.group_by_addTime.buckets;
             const allBuckets = all.aggregations.group_by_addTime.buckets;
             let buckets = [];
             for (let i = 0; i < len; i++) {
-                // console.log(ratifyBuckets[i].doc_count)
-                // console.log(allBuckets[i].doc_count)
                 if (ratifyBuckets[i] && allBuckets[i].doc_count) {
                     buckets.push({
                         key: allBuckets[i].key,
-                        doc_count: (ratifyBuckets[i].doc_count / allBuckets[i].doc_count).toFixed(2)
+                        doc_count: ((ratifyBuckets[i].doc_count / allBuckets[i].doc_count) * 100).toFixed(2)
                     });
                 } else {
                     buckets.push({
                         key: allBuckets[i].key,
-                        doc_count: '0.00'
+                        doc_count: 0
                     });
                 }
-                // ratifyBuckets[i].doc_count = ratifyBuckets[i] ? ratifyBuckets[i].doc_count : 0;
-                // allBuckets[i].doc_count = allBuckets[i] ? allBuckets[i].doc_count : 0;
             }
-            ctx.body.data.correct.push({
+            ctx.body.data.data.push({
                 teacher_id: teacher_id,
-                buckets: buckets
+                arr: buckets
             })
         }
-        // ctx.body.data.correct = ratify.aggregations.group_by_addTime.buckets
     } else if (type == '批注率') {
         for (let teacher_id of teacherAry) {
             // 批注数
@@ -204,18 +201,18 @@ TestCtrl.homeworkCorrect = async (ctx) => {
                 if (commentBuckets[i] && allBuckets[i].doc_count) {
                     buckets.push({
                         key: allBuckets[i].key,
-                        doc_count: (commentBuckets[i].doc_count / allBuckets[i].doc_count).toFixed(2)
+                        doc_count: ((commentBuckets[i].doc_count / allBuckets[i].doc_count) * 100).toFixed(2)
                     });
                 } else {
                     buckets.push({
                         key: allBuckets[i].key,
-                        doc_count: '0.00'
+                        doc_count: 0
                     });
                 }
             }
-            ctx.body.data.correct.push({
+            ctx.body.data.data.push({
                 teacher_id: teacher_id,
-                buckets: buckets
+                arr: buckets
             });
         }
     }
