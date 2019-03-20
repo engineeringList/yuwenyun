@@ -470,18 +470,18 @@ TestCtrl.clssHomework = async (ctx) => {
                 if (ratifyBuckets[i] && allBuckets[i].doc_count) {
                     buckets.push({
                         key: allBuckets[i].key,
-                        doc_count: (ratifyBuckets[i].doc_count / allBuckets[i].doc_count).toFixed(2)
+                        doc_count: ((ratifyBuckets[i].doc_count / allBuckets[i].doc_count) * 100).toFixed(2)
                     });
                 } else {
                     buckets.push({
                         key: allBuckets[i].key,
-                        doc_count: '0.00'
+                        doc_count: 0
                     });
                 }
             }
             ctx.body.data.class.push({
                 class_id: class_id,
-                buckets: buckets
+                arr: buckets
             })
         }
     } else if (type == '布置作业次数') {
@@ -508,7 +508,7 @@ TestCtrl.clssHomework = async (ctx) => {
             // ctx.body.data.correct = params
             ctx.body.data.class.push({
                 class_id: class_id,
-                buckets: body.aggregations.group_by_addTime.buckets
+                arr: body.aggregations.group_by_addTime.buckets
             })
         }
     }
