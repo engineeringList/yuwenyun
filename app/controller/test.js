@@ -9,6 +9,8 @@ var mongoUtil = require('../lib/mongoUtil');
 var MongoClient = require('mongodb').MongoClient;
 var uri = `mongodb://root:huangkai123!%40#@dds-uf6338efc0fe68741988-pub.mongodb.rds.aliyuncs.com:3717/yuwenyun?authSource=admin`
 
+const aliUrl = 'http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com';
+
 // db.collection( 'users' ).find();
 
 // let username = 'elastic'
@@ -63,7 +65,7 @@ TestCtrl.homeworkCorrect = async (ctx) => {
                         inline: "doc['task.add_time'].value * 1000"
                     },
                     interval: cycle_type,
-                    format: 'yyyy-MM-dd',
+                    // format: 'yyyy-MM-dd',
                     min_doc_count: 0,
                 }
             }
@@ -71,7 +73,7 @@ TestCtrl.homeworkCorrect = async (ctx) => {
         size: 0
     }
     const options = {
-        url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/taskquestions/_search`,
+        url: `${aliUrl}:9200/taskquestions/_search`,
         metch: 'POST',
         headers: {
             "Authorization": 'Basic ZWxhc3RpYzokUmUxMjM0NTY3OA==',
@@ -586,7 +588,7 @@ TestCtrl.homeworkColumn = async (ctx) => {
         size: 0
     }
     const options = {
-        url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/taskquestions/_search`,
+        url: `${aliUrl}:9200/taskquestions/_search`,
         metch: 'POST',
         // body: JSON.stringify(params),
         headers: {
