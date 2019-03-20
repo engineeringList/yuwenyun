@@ -123,8 +123,8 @@ TestCtrl.homeworkCorrect = async (ctx) => {
                 }
             });
             _must.push({
-                match: {
-                    status: '已批改',
+                term: {
+                    'status.keyword': '已批改',
                 }
             });
             params.query.bool.must = _must;
@@ -133,8 +133,8 @@ TestCtrl.homeworkCorrect = async (ctx) => {
             // 提交总数
             params.query.bool.must = params.query.bool.must.slice(0, -1);
             params.query.bool.must_not.push({
-                match: {
-                    status: '未答题',
+                term: {
+                    'status.keyword': '未答题',
                 }
             });
             options.body = JSON.stringify(params);
@@ -180,8 +180,8 @@ TestCtrl.homeworkCorrect = async (ctx) => {
                 }
             });
             _must.push({
-                match: {
-                    status: '已批改',
+                term: {
+                    'status.keyword': '已批改',
                 }
             });
             _must.push({
@@ -1146,7 +1146,10 @@ TestCtrl.schoolInformationCollect = async (ctx) => {
     //     ctx.body.errmsg = '参数不全';
     //     return
     // }
-    const school = await db.collection('schools').find({}).toArray();
+    const school = await db.collection('schools').find({
+        school_name: { $regex: `上海市` }
+    }).toArray();
+    ctx.body.data = school;
     return
     const columnAry = column_tag.split(',');
     const idAry = params_id.split(',');
