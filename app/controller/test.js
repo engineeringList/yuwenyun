@@ -573,7 +573,7 @@ TestCtrl.homeworkColumn = async (ctx) => {
         },
         {
             term: {
-                "task.type": "homework",
+                'task.type': 'homework',
             }
         },
         {
@@ -600,7 +600,7 @@ TestCtrl.homeworkColumn = async (ctx) => {
             'Content-Type': 'application/json'
         }
     }
-    ctx.body.data.column = [];
+    ctx.body.data.data = [];
     const column_tag = [
         { id: '5a9846d051f2429a80543196c2acac5f', name: '直击高考' },
         { id: 'b0979f01974a45d18d42700e92bf7948', name: '学科图谱' },
@@ -627,7 +627,7 @@ TestCtrl.homeworkColumn = async (ctx) => {
         // ctx.body.data.column = body
         tag.doc_count = (body.hits.total / total).toFixed(2);
         // ctx.body.data.correct = params
-        ctx.body.data.column.push(tag);
+        ctx.body.data.data.push(tag);
     }
 }
 
@@ -668,7 +668,9 @@ TestCtrl.learningReport = async (ctx) => {
         aggs: {
             group_by_addTime: {
                 date_histogram: {
-                    field: 'task.add_time',
+                    script: {
+                        inline: "doc['task.add_time'].value * 1000"
+                    },
                     interval: cycle_type,
                     min_doc_count: 0
                 },
@@ -685,17 +687,17 @@ TestCtrl.learningReport = async (ctx) => {
             'Content-Type': 'application/json'
         }
     }
-    ctx.body.data.learningReport = [];
+    ctx.body.data.data = [];
     if (type == 'person') {
         must.push({
             term: {
-                "task.student._id": params_id,
+                'task.student._id': params_id,
             }
         })
         params.query.bool.must = must;
         options.body = JSON.stringify(params);
         const body = await _request(options);
-        ctx.body.data.learningReport = body.aggregations.group_by_addTime.buckets;
+        ctx.body.data.data = body.aggregations.group_by_addTime.buckets;
     } else if (type == 'class') {
         const classAry = params_id.split(',');
         for (let class_id of classAry) {
@@ -712,7 +714,7 @@ TestCtrl.learningReport = async (ctx) => {
             const body = await _request(options);
             // ctx.body.data.correct = body
             // ctx.body.data.correct = params
-            ctx.body.data.learningReport.push({
+            ctx.body.data.data.push({
                 class_id: class_id,
                 buckets: body.aggregations.group_by_addTime.buckets
             });
