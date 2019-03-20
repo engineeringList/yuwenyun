@@ -1933,7 +1933,7 @@ TestCtrl.arrangeHomework = async (ctx) => {
         },
     ]
     const teacherParams = {
-        _source: ['task.teacher._id'],
+        // _source: ['task.teacher._id'],
         from: from,
         size: num,
         collapse: {
@@ -1960,7 +1960,7 @@ TestCtrl.arrangeHomework = async (ctx) => {
         });
         teacherParams.query.bool.must.push({
             term: {
-                'task.school': school_id
+                'task.school._id': school_id
             }
         });
     }
@@ -2015,8 +2015,12 @@ TestCtrl.arrangeHomework = async (ctx) => {
     options.url = url;
     options.size = 1;
     ctx.body.data.interaction = [];
+
     options.body = JSON.stringify(teacherParams);
     const teacherlist = await _request(options);
+    // console.log(teacherlist)
+    // ctx.body.data = teacherlist
+    // return
     ctx.body.data.data = [];
     let Measurement_target = [];
     for (let target_id of arr) {
