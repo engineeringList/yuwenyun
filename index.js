@@ -34,42 +34,42 @@ app.use(router.routes());
 
 // global.client = client;
 // var utils = require('mongoose-dbref').utils;
-var mongoose = require("mongoose");
-var db = `mongodb://dds-uf6338efc0fe68741988-pub.mongodb.rds.aliyuncs.com:3717/yuwenyun?authSource=admin`
-// 连接
-const Db = mongoose.connect(db, { user: 'root', pass: 'huangkai123!@#', useNewUrlParser: true });
+// var mongoose = require("mongoose");
+// var db = `mongodb://dds-uf6338efc0fe68741988-pub.mongodb.rds.aliyuncs.com:3717/yuwenyun?authSource=admin`
+// // 连接
+// const Db = mongoose.connect(db, { user: 'root', pass: 'huangkai123!@#', useNewUrlParser: true });
 
-var connection = mongoose.connection;
-connection.on('connected', function () {
-  console.log('Mongoose 连接成功');
-})
+// var connection = mongoose.connection;
+// connection.on('connected', function () {
+//   console.log('Mongoose 连接成功');
+// })
 
-connection.on('error', function (error) {
-  console.log(error);
-})
-connection.once('open', function (callback) {
-  let school = mongoose.model('schools', new mongoose.Schema({
-    school_memo: String,
-    school_classess: [{ 
-      $ref: String,
-      $id: String,
-      $db: String
-    }],
-  }));
-  mongoose.set('debug', true);
+// connection.on('error', function (error) {
+//   console.log(error);
+// })
+// connection.once('open', function (callback) {
+//   let school = mongoose.model('schools', new mongoose.Schema({
+//     school_memo: String,
+//     school_classess: [{ 
+//       $ref: String,
+//       $id: String,
+//       $db: String
+//     }],
+//   }));
+//   mongoose.set('debug', true);
   // let Classes = mongoose.model('Classes', new mongoose.Schema({
   //   class_name: String
   // }));
   // .populate('school_classess')
   // let teacher = mongoose.model('teachers', new mongoose.Schema({}));
-  school.find({}).limit(1).skip(1).exec(function (err, docs) {
+  // school.find({}).limit(1).skip(1).exec(function (err, docs) {
     // console.log(docs.school_classess[0])
     // utils.fetch(Db, docs.school_classess[0],
     //   function (err, doc) {
     //     if (err) throw err;
     //     console.log("Order = " + doc);
     //   });
-  })
+  // })
   // Classes.find({}).exec(function(err,docs){
   //    console.log(docs[0])
   // })
@@ -83,7 +83,7 @@ connection.once('open', function (callback) {
   //   console.log('starting at port 3000');
   // });
   // app.listen(8080, () => console.log('Express server listening on port 8080'));
-})
+// })
 
 require('./app/lib/sync.js').changeStream()
 

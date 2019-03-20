@@ -44,17 +44,12 @@ TestCtrl.homeworkCorrect = async (ctx) => {
         },
         {
             term: {
-                "task.type": "homework",
+                'task.type': 'homework',
             }
-        },
-        // {
-        //     term: {
-        //         'task.teacher._id': '12'                           
-        //     }
-        // }
+        }
     ]
     const params = {
-        _source: ["policy", "task.teacher", 'status'],
+        _source: ['policy', 'task.teacher', 'status'],
         query: {
             bool: {
                 must: [],
@@ -68,7 +63,7 @@ TestCtrl.homeworkCorrect = async (ctx) => {
                         inline: "doc['task.add_time'].value * 1000"
                     },
                     interval: cycle_type,
-                    // format: 'yyyy-MM-dd HH',
+                    format: 'yyyy-MM-dd',
                     min_doc_count: 0,
                 }
             }
@@ -78,7 +73,6 @@ TestCtrl.homeworkCorrect = async (ctx) => {
     const options = {
         url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/taskquestions/_search`,
         metch: 'POST',
-        // body: JSON.stringify(params),
         headers: {
             "Authorization": 'Basic ZWxhc3RpYzokUmUxMjM0NTY3OA==',
             'Content-Type': 'application/json'
@@ -105,7 +99,7 @@ TestCtrl.homeworkCorrect = async (ctx) => {
             const body = await _request(options);
             // ctx.body.data.correct = body
             // ctx.body.data.correct = params
-            ctx.body.data.correct.push({
+            ctx.body.data.data.push({
                 teacher_id: teacher_id,
                 arr: body.aggregations.group_by_addTime.buckets
             })
