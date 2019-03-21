@@ -1981,12 +1981,15 @@ TestCtrl.arrangeHomework = async (ctx) => {
         let teacherArrTag = [];
         let teacherTagPro = [];
         // 5c11028878d70590cc29e7f7
-        must.push({
+        let teacherMust = must.map(function (value) {
+            return value;
+        });
+        teacherMust.push({
             term: {
                 'task.teacher._id': teacherId
             }
         });
-        params.query.bool.must = must;
+        params.query.bool.must = teacherMust;
         options.body = JSON.stringify(params);
         const teacherAll = await _request(options);
         const teacherQuestionsNumber = teacherAll.hits.total;
@@ -1994,7 +1997,7 @@ TestCtrl.arrangeHomework = async (ctx) => {
         // ctx.body = teacherAll;
         // return
         for (let targetId of arr) {
-            let _must = must.map(function (value) {
+            let _must = teacherMust.map(function (value) {
                 return value;
             });
             _must.push({
@@ -2020,19 +2023,18 @@ TestCtrl.arrangeHomework = async (ctx) => {
         const grade = await db.collection('classes').find({
             'class_teacher.$id': mongodb.ObjectID(teacherId)
         }).toArray();
-        must.slice(0, -1);
         for (let item of grade) {
             const class_id = item._id;
             let obj = {};
-            let class_must = must.map(function (value) {
+            let classMust = must.map(function (value) {
                 return value;
             });
-            must.push({
+            classMust.push({
                 term: {
                     'task.class._id': class_id
                 }
             });
-            params.query.bool.must = class_must;
+            params.query.bool.must = classMust;
             options.body = JSON.stringify(params);
             const all = await _request(options);
             obj.class_id = class_id;
@@ -2040,20 +2042,20 @@ TestCtrl.arrangeHomework = async (ctx) => {
             let tagArr = [];
             let tagPro = [];
             for (let target_id of arr) {
-                let class_must = must.map(function (value) {
+                let _must = classMust.map(function (value) {
                     return value;
                 });
                 // 5c219368e5d0c040ac2642f1
                 // const class_id = item._id;
                 // const class_id = '5c219368e5d0c040ac2642f1';
                 // 7ad93e2ffa8e42e99c437f6ba1e65610,992af882349444058e0571ae12cafe22
-                class_must.push({
+                _must.push({
                     query_string: {
                         default_field: 'Measurement_target',
                         query: `*${target_id}*`
                     }
                 });
-                params.query.bool.must = class_must;
+                params.query.bool.must = _must;
                 options.body = JSON.stringify(params);
                 tagPro.push(_request(Object.assign({}, options)));
             }
