@@ -11,7 +11,6 @@ var uri = `mongodb://root:huangkai123!%40#@dds-uf6338efc0fe68741988-pub.mongodb.
 
 const aliUrl = 'http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com';
 
-var Promise = require('bluebird');
 
 // db.collection( 'users' ).find();
 
