@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/dlyt/koa-init#readme",
   "dependencies": {
+    "bluebird": "^3.5.3",
     "elasticsearch": "^15.4.1",
     "koa": "^2.5.0",
     "koa-morgan": "^1.0.1",

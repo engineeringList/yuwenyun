@@ -44,7 +44,7 @@ module.exports = {
 							}
 							res.total_score = total_score;
 							const options = {
-								url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/yuwenyun/taskquestions/${_id}`,
+								url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/taskquestions/taskquestions/${_id}`,
 								method: 'POST',
 								headers: {
 									"Authorization": 'Basic ZWxhc3RpYzokUmUxMjM0NTY3OA==',

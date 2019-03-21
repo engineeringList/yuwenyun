@@ -11,6 +11,8 @@ var uri = `mongodb://root:huangkai123!%40#@dds-uf6338efc0fe68741988-pub.mongodb.
 
 const aliUrl = 'http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com';
 
+var Promise = require('bluebird');
+
 // db.collection( 'users' ).find();
 
 // let username = 'elastic'
@@ -1906,9 +1908,7 @@ TestCtrl.arrangeHomework = async (ctx) => {
     }
     let from = 0;
     let { num, page, start_time, end_time, school_id } = ctx.query;
-    if (num) {
-        num = num ? num : 0;
-    }
+    num = num ? num : 10;
     if (page) {
         from = (page - 1) * num;
     }
@@ -1925,84 +1925,26 @@ TestCtrl.arrangeHomework = async (ctx) => {
             term: {
                 'task.type': 'homework',
             }
-        },
-        {
-            term: {
-                policy: 1,
-            }
-        },
+        }
     ]
-    const teacherParams = {
-        // _source: ['task.teacher._id'],
-        from: from,
-        size: num,
-        collapse: {
-            field: 'task.teacher._id.keyword'
-        },
-        aggs: {
-            count: {
-                cardinality: {
-                    field: 'task.teacher._id.keyword'
-                }
-            }
-        },
-        query: {
-            bool: {
-                must: []
-            }
-        }
-    }
-    if (school_id) {
-        must.push({
-            term: {
-                'task.school': school_id
-            }
-        });
-        teacherParams.query.bool.must.push({
-            term: {
-                'task.school._id': school_id
-            }
-        });
-    }
-    const classParams = {
-        _source: ['task.class._id'],
-        query: {
-            bool: {
-                must: [
-                    {
-                        term: {
-                            'task.teacher._id': ''
-                        }
-                    }
-                ],
-                must_not: []
-            },
-        },
-        collapse: {
-            field: 'task.class._id.keyword'
-        }
-    }
     const params = {
         query: {
             bool: {
-                must: [
-
-                ],
-                must_not: []
+                must: []
             },
         },
+        size: 1
     }
     const options = {
-        url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/column_tag/_search`,
+        url: `${aliUrl}:9200/taskquestions/_search`,
         method: 'POST',
         headers: {
             "Authorization": 'Basic ZWxhc3RpYzokUmUxMjM0NTY3OA==',
             'Content-Type': 'application/json'
         }
     }
-    options.body = JSON.stringify(params);
-    const tags = await _request(options);
-    const val = tags.hits.hits[0]._source.element[1].element;
+    const tags = await db.collection('column_tag').findOne();
+    const val = tags.element[1].element;
     let arr = [];
     for (let item of val) {
         for (let _itme of item.element) {
@@ -2011,81 +1953,129 @@ TestCtrl.arrangeHomework = async (ctx) => {
             }
         }
     }
-    const url = `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/taskquestions/_search`;
-    options.url = url;
-    options.size = 1;
-    ctx.body.data.interaction = [];
-
-    options.body = JSON.stringify(teacherParams);
-    const teacherlist = await _request(options);
-    // console.log(teacherlist)
-    // ctx.body.data = teacherlist
-    // return
+    const len = arr.length;
+    const schoolParams = {};
+    const teacherParams = [
+        {
+            $lookup: {
+                from: 'schools',
+                localField: '_id',
+                foreignField: 'school_teachers',
+                as: 'school'
+            }
+        },
+        { $limit: parseInt(num) },
+        { $skip: from },
+        { $sort: { 'school.school_name': -1 } },
+    ]
+    if (school_id) {
+        teacherParams.push({
+            $match: { 'school._id': mongodb.ObjectID(school_id) },
+        });
+    }
+    const teacherlist = await db.collection('teachers').aggregate(teacherParams).toArray();
+    const count = await db.collection('teachers').find().count();
     ctx.body.data.data = [];
-    let Measurement_target = [];
-    for (let target_id of arr) {
-        for (let teacherItem of teacherlist.hits.hits) {
-            const teacher_id = teacherItem._source.task.teacher._id;
+    for (let teacherItem of teacherlist) {
+        const teacherId = teacherItem._id;
+        let teacherArrTag = [];
+        let teacherTagPro = [];
+        // 5c11028878d70590cc29e7f7
+        must.push({
+            term: {
+                'task.teacher._id': teacherId
+            }
+        });
+        params.query.bool.must = must;
+        options.body = JSON.stringify(params);
+        const teacherAll = await _request(options);
+        const teacherQuestionsNumber = teacherAll.hits.total;
+        // console.log(teacherId)
+        // ctx.body = teacherAll;
+        // return
+        for (let targetId of arr) {
             let _must = must.map(function (value) {
                 return value;
             });
             _must.push({
-                term: {
-                    'task.teacher._id': teacher_id
-                }
-            });
-            _must.push({
-                match: {
-                    Measurement_target: target_id,
+                query_string: {
+                    default_field: 'Measurement_target',
+                    query: `*${targetId}*`
                 }
             });
             params.query.bool.must = _must;
             options.body = JSON.stringify(params);
-            const target = await _request(options);
-            Measurement_target.push({
-                id: target_id,
-                count: target.hits.total
-            });
-            classParams.query.bool.must[0].term['task.teacher._id'] = teacher_id;
-            options.body = JSON.stringify(classParams);
-            const classList = await _request(options);
-            let arr_class = [];
-            // for (let item of classList.hits.hits) {
-            //     const class_id = item._source.task.class._id;
-            //     let _must = must.map(function (value) {
-            //         return value;
-            //     });
-            //     _must.push({
-            //         term: {
-            //             'task.class._id': class_id
-            //         }
-            //     });
-            //     _must.push({
-            //         match: {
-            //             Measurement_target: target_id,
-            //         }
-            //     });
-            //     params.query.bool.must = _must;
-            //     options.body = JSON.stringify(params);
-            //     const classTarget = await _request(options);
-            //     const classTargetTotal = classTarget.hits.total;
-            //     arr_class.push({
-            //         class_id: class_id,
-            //         classTargetTotal: classTargetTotal,
-            //     });
-            // }
-            const count = teacherlist.aggregations.count.value;
-            ctx.body.data.count = count;
-            ctx.body.data.totalPage = Math.ceil(count / num);
-            ctx.body.data.data.push({
-                teacher_id: teacher_id,
-                // questions_number: 1,
-                Measurement_target: Measurement_target,
-                arr_class: arr_class
+            teacherTagPro.push(_request(Object.assign({}, options)));
+        }
+        const teacherTargetArr = await Promise.all(teacherTagPro);
+        for (let i = 0; i < len; i++) {
+            teacherArrTag.push({
+                Measurement_target: arr[i],
+                Measurement_target_count: teacherTargetArr[i].hits.total
             });
         }
+        // return
+        // 班级
+        let arr_class = [];
+        const grade = await db.collection('classes').find({
+            'class_teacher.$id': mongodb.ObjectID(teacherId)
+        }).toArray();
+        must.slice(0, -1);
+        for (let item of grade) {
+            const class_id = item._id;
+            let obj = {};
+            let class_must = must.map(function (value) {
+                return value;
+            });
+            must.push({
+                term: {
+                    'task.class._id': class_id
+                }
+            });
+            params.query.bool.must = class_must;
+            options.body = JSON.stringify(params);
+            const all = await _request(options);
+            obj.class_id = class_id;
+            obj.questions_number = all.hits.total;
+            let tagArr = [];
+            let tagPro = [];
+            for (let target_id of arr) {
+                let class_must = must.map(function (value) {
+                    return value;
+                });
+                // 5c219368e5d0c040ac2642f1
+                // const class_id = item._id;
+                // const class_id = '5c219368e5d0c040ac2642f1';
+                // 7ad93e2ffa8e42e99c437f6ba1e65610,992af882349444058e0571ae12cafe22
+                class_must.push({
+                    query_string: {
+                        default_field: 'Measurement_target',
+                        query: `*${target_id}*`
+                    }
+                });
+                params.query.bool.must = class_must;
+                options.body = JSON.stringify(params);
+                tagPro.push(_request(Object.assign({}, options)));
+            }
+            const classTargetArr = await Promise.all(tagPro);
+            for (let i = 0; i < len; i++) {
+                tagArr.push({
+                    Measurement_target: arr[i],
+                    Measurement_target_count: classTargetArr[i].hits.total
+                });
+            }
+            obj.arr_tag = tagArr;
+            arr_class.push(obj);
+        }
+        ctx.body.data.data.push({
+            teacher_id: teacherId,
+            questions_number: teacherQuestionsNumber,
+            arr_tag: teacherArrTag,
+            arr_class: arr_class
+        });
     }
-
+    ctx.body.data.count = count;
+    ctx.body.data.totalPage = Math.ceil(count / num);
 }
 
 // const _request = (options) => {
