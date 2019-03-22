@@ -509,7 +509,7 @@ TestCtrl.homeworkCount = async (ctx) => {
             'Content-Type': 'application/json'
         }
     }
-    ctx.body.data.correct = [];
+    ctx.body.data.data = [];
     if (type == '布置作业次数') {
         params.aggs.group_by_addTime.aggs = {
             homework_count: {
@@ -541,7 +541,7 @@ TestCtrl.homeworkCount = async (ctx) => {
         const body = await _request(options);
         // ctx.body.data.correct = body
         // ctx.body.data.correct = params
-        ctx.body.data.count.push({
+        ctx.body.data.data.push({
             teacher_id: teacher_id,
             buckets: body.aggregations.group_by_addTime.buckets
         })
@@ -608,6 +608,8 @@ TestCtrl.homeworkColumn = async (ctx) => {
     params.query.bool.must = must;
     options.body = JSON.stringify(params);
     const all = await _request(options);
+    // ctx.body = all;
+    // return
     const total = all.hits.total;
     for (let tag of column_tag) {
         let _must = must.map(function (value) {
@@ -622,7 +624,7 @@ TestCtrl.homeworkColumn = async (ctx) => {
         options.body = JSON.stringify(params);
         const body = await _request(options);
         // ctx.body.data.column = body
-        tag.doc_count = (body.hits.total / total).toFixed(2);
+        tag.doc_count = ((body.hits.total / total) * 100).toFixed(2);
         // ctx.body.data.correct = params
         ctx.body.data.data.push(tag);
     }
