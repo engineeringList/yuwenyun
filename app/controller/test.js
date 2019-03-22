@@ -492,7 +492,9 @@ TestCtrl.homeworkCount = async (ctx) => {
         aggs: {
             group_by_addTime: {
                 date_histogram: {
-                    field: 'task.add_time',
+                    script: {
+                        inline: "doc['task.add_time'].value * 1000"
+                    },
                     interval: cycle_type,
                     min_doc_count: 0
                 }
@@ -501,7 +503,7 @@ TestCtrl.homeworkCount = async (ctx) => {
         size: 0
     }
     const options = {
-        url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/taskquestions/_search`,
+        url: `${aliUrl}:9200/taskquestions/_search`,
         metch: 'POST',
         // body: JSON.stringify(params),
         headers: {
@@ -514,7 +516,7 @@ TestCtrl.homeworkCount = async (ctx) => {
         params.aggs.group_by_addTime.aggs = {
             homework_count: {
                 cardinality: {
-                    field: "task.id.keyword"
+                    field: 'task.id.keyword'
                 }
             }
         }
