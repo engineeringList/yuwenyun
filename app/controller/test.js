@@ -1950,29 +1950,83 @@ TestCtrl.arrangeHomework = async (ctx) => {
     }
     const len = arr.length;
     const schoolParams = {};
-    const teacherParams = [
-        {
-            $lookup: {
-                from: 'schools',
-                localField: '_id',
-                foreignField: 'school_teachers',
-                as: 'school'
-            }
-        },
-        { $limit: parseInt(num) },
-        { $skip: from },
-        { $sort: { 'school.school_name': -1 } },
-    ]
-    if (school_id) {
-        teacherParams.push({
-            $match: { 'school._id': mongodb.ObjectID(school_id) },
-        });
+    const teacherParams = {	
+        _source: ['task.teacher._id'],	
+        from: from,	
+        size: num,	
+        collapse: {	
+            field: 'task.teacher._id.keyword'	
+        },	
+        aggs: {	
+            count: {	
+                cardinality: {	
+                    field: 'task.teacher._id.keyword'	
+                }	
+            }	
+        },	
+        query: {	
+            bool: {	
+                must: []	
+            }	
+        }	
     }
-    const teacherlist = await db.collection('teachers').aggregate(teacherParams).toArray();
-    const count = await db.collection('teachers').find().count();
+    const classParams = {	
+        _source: ['task.class._id'],	
+        query: {	
+            bool: {	
+                must: [	
+                    {	
+                        term: {	
+                            'task.teacher._id': ''	
+                        }	
+                    }	
+                ],	
+                must_not: []	
+            },	
+        },	
+        collapse: {	
+            field: 'task.class._id.keyword'	
+        }	        
+    }
+    // const teacherParams = [
+    //     {
+    //         $lookup: {
+    //             from: 'schools',
+    //             localField: '_id',
+    //             foreignField: 'school_teachers',
+    //             as: 'school'
+    //         }
+    //     },
+    //     { $limit: parseInt(num) },
+    //     { $skip: from },
+    //     { $sort: { 'school.school_name': -1 } },
+    // ]
+    // if (school_id) {
+    //     teacherParams.push({
+    //         $match: { 'school._id': mongodb.ObjectID(school_id) },
+    //     });
+    //     must.push({
+    //         term: 'task.type': 'homework',
+    //     })
+    // }
+    if (school_id) {	
+        must.push({	
+            term: {	
+                'task.school': school_id	
+            }	
+        });	
+        teacherParams.query.bool.must.push({	
+            term: {	
+                'task.school._id': school_id	
+            }	
+        });	
+    }
+    options.body = JSON.stringify(teacherParams);
+    const teacherlist = await _request(options);
+    const count = teacherlist.aggregations.count.value;
     ctx.body.data.data = [];
-    for (let teacherItem of teacherlist) {
-        const teacherId = teacherItem._id;
+    for (let teacherItem of teacherlist.hits.hits) {
+        const teacherId = teacherItem._source.task.teacher._id;
         let teacherArrTag = [];
         let teacherTagPro = [];
         // 5c11028878d70590cc29e7f7
@@ -2015,11 +2069,14 @@ TestCtrl.arrangeHomework = async (ctx) => {
         // return
         // 班级
         let arr_class = [];
-        const grade = await db.collection('classes').find({
-            'class_teacher.$id': mongodb.ObjectID(teacherId)
-        }).toArray();
-        for (let item of grade) {
-            const class_id = item._id;
+        classParams.query.bool.must[0].term['task.teacher._id'] = teacherId
+        options.body = JSON.stringify(classParams);
+        const grade = await _request(options);
+        // const grade = await db.collection('classes').find({
+        //     'class_teacher.$id': mongodb.ObjectID(teacherId)
+        // }).toArray();
+        for (let item of grade.hits.hits) {
+            const class_id = item._source.task.class._id;
             let obj = {};
             let classMust = must.map(function (value) {
                 return value;
