@@ -1691,11 +1691,11 @@ TestCtrl.exerciseNumber = async (ctx) => {
                 'task.school': school_id
             }
         });
-        teacherParams.query.bool.must.push({
-            term: {
-                'task.school': school_id
-            }
-        });
+        // teacherParams.query.bool.must.push({
+        //     term: {
+        //         'task.school': school_id
+        //     }
+        // });
     }
     const classParams = {
         _source: ['task.class._id'],
