@@ -2012,7 +2012,7 @@ TestCtrl.arrangeHomework = async (ctx) => {
     if (school_id) {	
         must.push({	
             term: {	
-                'task.school': school_id	
+                'task.school._id': school_id	
             }	
         });	
         teacherParams.query.bool.must.push({	
@@ -2041,6 +2041,8 @@ TestCtrl.arrangeHomework = async (ctx) => {
         params.query.bool.must = teacherMust;
         options.body = JSON.stringify(params);
         const teacherAll = await _request(options);
+        // ctx.body = teacherAll;
+        // return
         const teacherQuestionsNumber = teacherAll.hits.total;
         // console.log(teacherId)
         // ctx.body = teacherAll;
