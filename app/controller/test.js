@@ -618,13 +618,16 @@ TestCtrl.homeworkColumn = async (ctx) => {
             return value;
         });
         _must.push({
-            match: {
-                column_tag: tag.id
+            query_string: {
+                default_field: 'column_tag',
+                query: `*${tag.id}*`
             }
         })
         params.query.bool.must = _must;
         options.body = JSON.stringify(params);
         const body = await _request(options);
+        console.log(body.hits.total)
+        // return
         // ctx.body.data.column = body
         tag.doc_count = ((body.hits.total / total) * 100).toFixed(2);
         // ctx.body.data.correct = params
