@@ -1217,7 +1217,7 @@ TestCtrl.homeworkRate = async (ctx) => {
         from = (page - 1) * num;
     }
     const options = {
-        url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/yuwenyun/taskquestions/_search`,
+        url: `${aliUrl}:9200/taskquestions/_search`,
         metch: 'POST',
         // body: JSON.stringify(params),
         headers: {
@@ -1305,16 +1305,6 @@ TestCtrl.homeworkRate = async (ctx) => {
                     ],
                     must_not: [],
                     minimum_should_match: 1
-                    // must: [{
-                    //     term: {
-                    //         'task.type': 'non_task'
-                    //     }
-                    // }],
-                    // must_not: {
-                    //     term: {
-                    //         'policy': 1
-                    //     }
-                    // }
                 },
             },
             // _source: ['policy'],
@@ -1322,7 +1312,7 @@ TestCtrl.homeworkRate = async (ctx) => {
                 aggregation: {
                     avg: {
                         script: {
-                            inline: "doc['question_score'].value / doc['total_score'].value"
+                            inline: "if (doc['total_score'].value == 0) { return 0 } else { return doc['question_score'].value / doc['total_score'].value }"
                         }
                     }
                 },
@@ -1331,7 +1321,11 @@ TestCtrl.homeworkRate = async (ctx) => {
         }
         options.body = JSON.stringify(params);
         const score_rate = await _request(options);
-        grade.score_rate = score_rate.aggregations.aggregation.value;
+        // console.log(score_rate)
+        // ctx.body = score_rate;
+        // return
+        const val = score_rate.aggregations.aggregation.value
+        grade.score_rate = val ? val : 0;
     }
     const count = arr.length
     ctx.body.data.count = count;
