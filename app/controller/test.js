@@ -743,7 +743,7 @@ TestCtrl.livenessReport = async (ctx) => {
         },
         {
             match: {
-                event: 'LONGIN'
+                event: 'SIGN_IN'
             }
         }
     ]
