@@ -1313,38 +1313,38 @@ TestCtrl.homeworkRate = async (ctx) => {
                             }
                         }
                     ],
-                    // should: [
-                    //     {
-                    //         bool: {
-                    //             must: [{
-                    //                 match: {
-                    //                     'task.type.keyword': 'non_task'
-                    //                 }
-                    //             }],
-                    //             must_not: [{
-                    //                 term: {
-                    //                     policy: 1
-                    //                 }
-                    //             }]
-                    //         }
-                    //     },
-                    //     {
-                    //         bool: {
-                    //             must: {
-                    //                 term: {
-                    //                     policy: 1
-                    //                 }
-                    //             },
-                    //             must_not: {
-                    //                 match: {
-                    //                     'task.type.keyword': 'non_task'
-                    //                 }
-                    //             }
-                    //         }
-                    //     },
-                    // ],
+                    should: [
+                        {
+                            bool: {
+                                must: [{
+                                    match: {
+                                        'task.type.keyword': 'non_task'
+                                    }
+                                }],
+                                must_not: [{
+                                    term: {
+                                        policy: 1
+                                    }
+                                }]
+                            }
+                        },
+                        {
+                            bool: {
+                                must: {
+                                    term: {
+                                        policy: 1
+                                    }
+                                },
+                                must_not: {
+                                    match: {
+                                        'task.type.keyword': 'non_task'
+                                    }
+                                }
+                            }
+                        },
+                    ],
                     must_not: [],
-                    // minimum_should_match: 1
+                    minimum_should_match: 1
                 },
             },
             // _source: ['policy'],
