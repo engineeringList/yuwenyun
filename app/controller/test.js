@@ -931,8 +931,8 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
         // return
         // 提交数
         params.query.bool.must_not.push({
-            match: {
-                status: '未答题',
+            term: {
+                'status.keyword': '未答题',
             }
         });
         options.body = JSON.stringify(params);
@@ -947,7 +947,7 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
             if (submitBuckets[i] && allBuckets[i].doc_count) {
                 buckets.push({
                     key: allBuckets[i].key,
-                    doc_count: (submitBuckets[i].doc_count / allBuckets[i].doc_count).toFixed(2) * 100
+                    doc_count: ((submitBuckets[i].doc_count / allBuckets[i].doc_count)  * 100).toFixed(2)
                 });
             } else {
                 buckets.push({
