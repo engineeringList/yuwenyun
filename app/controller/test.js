@@ -1698,7 +1698,7 @@ TestCtrl.exerciseNumber = async (ctx) => {
         // });
     }
     const classParams = {
-        _source: ['task.class._id'],
+        _source: ['task.class._id', 'task.class.class_name', 'task.class.class_year', 'task.school.school_name'],
         query: {
             bool: {
                 must: [],
@@ -1714,7 +1714,8 @@ TestCtrl.exerciseNumber = async (ctx) => {
         },
         collapse: {
             field: 'task.class._id.keyword'
-        }
+        },
+        sort: { 'task.school.school_name.keyword': { 'order': 'desc' }}
     }
     const params = {
         query: {
@@ -1728,7 +1729,7 @@ TestCtrl.exerciseNumber = async (ctx) => {
         size: 0
     }
     const options = {
-        url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/taskquestions/_search`,
+        url: `${aliUrl}:9200/taskquestions/_search`,
         metch: 'POST',
         // body: JSON.stringify(params),
         headers: {
@@ -1739,12 +1740,19 @@ TestCtrl.exerciseNumber = async (ctx) => {
     // params.query.bool.must = must;
     options.body = JSON.stringify(classParams);
     const classList = await _request(options);
+    // ctx.body = classList;
+    // return
     const count = classList.aggregations.count.value
     ctx.body.data.count = count;
     ctx.body.data.totalPage = Math.ceil(count / num);
     ctx.body.data.data = [];
     for (let item of classList.hits.hits) {
         const class_id = item._source.task.class._id;
+        const school_name = item._source.task.school.school_name;
+        const class_year = item._source.task.school.class_year;
+        const class_name = item._source.task.class.class_name;
+        // ctx.body = item
+        // return 
         must.push({
             term: {
                 'task.class._id': class_id
@@ -1771,6 +1779,9 @@ TestCtrl.exerciseNumber = async (ctx) => {
         // ctx.body.data.exerciseNumber = noTask;
         // const correctTotal = correct.hits.total;
         ctx.body.data.data.push({
+            school_name: school_name,
+            class_year: class_year,
+            class_name: class_name,
             class_id: class_id,
             dayTask: dayTask.hits.total,
             homeworkNumber: homework.hits.total,
