@@ -906,7 +906,7 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
         size: 2
     }
     const options = {
-        url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/yuwenyun/taskquestions/_search`,
+        url: `${aliUrl}:9200/taskquestions/_search`,
         metch: 'POST',
         // body: JSON.stringify(params),
         headers: {
@@ -1887,12 +1887,18 @@ TestCtrl.classInformationCollect = async (ctx) => {
     // params.query.bool.must = must;
     options.body = JSON.stringify(classParams);
     const classList = await _request(options);
-    const count = classList.aggregations.count.value
+    const count = classList.aggregations.count.value;
     ctx.body.data.count = count;
+    ctx.body.data.pageSize = num;
     ctx.body.data.totalPage = Math.ceil(count / num);
     ctx.body.data.data = [];
     for (let item of classList.hits.hits) {
         const class_id = item._source.task.class._id;
+        const grade = await db.collection('classes').findOne({
+            '_id': mongodb.ObjectID(class_id)
+        });
+        console.log(grade)
+        return
         must.push({
             term: {
                 'task.class._id': class_id
