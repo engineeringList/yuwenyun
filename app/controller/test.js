@@ -223,12 +223,11 @@ TestCtrl.teacherInformationCollect = async (ctx) => {
     }
     let { teacher_name } = ctx.query;
     let teacherParams = {};
-    
-    console.log(encodeURI(teacherParams))
+    // console.log(typeof teacher_name)
     if (teacher_name) {
-        teacherParams = { name: { $regex: encodeURI(teacherParams) } }
-        console.log(teacherParams)
+        teacherParams = { name: { $regex: teacher_name } }
     } 
+    
     const teachers = await db.collection('teachers').find(teacherParams).toArray();
     // console.log(teachers)
     // return
