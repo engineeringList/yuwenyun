@@ -226,24 +226,9 @@ TestCtrl.teacherInformationCollect = async (ctx) => {
         ctx.body.errmsg = '参数不全';
         return
     }
-    const params = {
-        // _source: ["status", "test1"],
-        query: {
-            bool: {
-                filter: [],
-                must: [
-                    {
-                        match: {
-                            'task.teacher.name': teacher_name,
-                        }
-                    }
-                ],
-                must_not: []
-            },
-        },
-        aggs: {},
-        size: 12
-    }
+    const teachers = await db.collection('teachers').find({
+        name: { $regex: teacher_name } 
+    }).toArray();
     const options = {
         url: `${aliUrl}:9200/taskquestions/_search`,
         metch: 'POST',
@@ -253,57 +238,87 @@ TestCtrl.teacherInformationCollect = async (ctx) => {
             'Content-Type': 'application/json'
         }
     }
-    ctx.body.data = {};
-    // 布置作业次数
-    params.aggs = {
-        count: {
-            cardinality: {
-                field: 'task.id.keyword'
+    ctx.body.data.data = [];
+    for (let teacher of teachers) {
+        let obj = {}
+        const teacherId = teacher._id;
+        const grade = await db.collection('classes').findOne({
+            'class_teacher.$id': mongodb.ObjectID(teacherId)
+        });
+        // console.log(grade)
+        obj.teacher_name = teacher.name;
+        obj.class_name = '';
+        if (grade) {
+            obj.class_name = grade.class_name;
+        }
+        const params = {
+            query: {
+                bool: {
+                    filter: [],
+                    must: [],
+                    must_not: []
+                },
+            },
+            aggs: {},
+            size: 0
+        }
+        params.query.bool.must.push({
+            term: {
+                'task.teacher._id': teacherId
+            }
+        })
+        // 布置作业次数
+        params.aggs = {
+            count: {
+                cardinality: {
+                    field: 'task.id.keyword'
+                }
             }
         }
+        options.body = JSON.stringify(params);
+        let body = await _request(options);
+        obj.task_time = body.aggregations.count.value;
+        // 布置作业题数统计
+        obj.task_number = body.hits.total;
+        // 手工批改作业题数
+        params.query.bool.must.push({
+            term: {
+                'status.keyword': '已批改'
+            }
+        });
+        options.body = JSON.stringify(params);
+        body = await _request(options);
+        obj.manual_task_number = body.hits.total;
+        // 提交总数
+        params.query.bool.must = params.query.bool.must.slice(0, -1);
+        params.query.bool.must_not.push({
+            term: {
+                'status.keyword': '未答题'
+            }
+        });
+        options.body = JSON.stringify(params);
+        body = await _request(options);
+        const submitTotal = body.hits.total;
+        obj.manual_correct_rate = ((obj.manual_task_number / submitTotal) * 100).toFixed(2);
+        delete params.query.bool.must_not;
+        params.query.bool.must.push({
+            term: {
+                'status.keyword': '已批改'
+            }
+        });
+        params.query.bool.must.push({
+            exists: {
+                field: 'correct'
+            }
+        });
+        options.body = JSON.stringify(params);
+        body = await _request(options);
+        obj.manual_postil_rate = ((body.hits.total / submitTotal) * 100).toFixed(2);
+        ctx.body.data.data.push(obj);
+        // console.log(grade)
+        // ctx.body = params
+        // return
     }
-    options.body = JSON.stringify(params);
-    let body = await _request(options);
-    ctx.body.data.task_time = body.aggregations.count.value;
-    // 布置作业题数统计
-    ctx.body.data.task_number = body.hits.total;
-    // 手工批改作业题数
-    params.query.bool.must.push({
-        match: {
-            status: '已批改'
-        }
-    });
-    options.body = JSON.stringify(params);
-    body = await _request(options);
-    // ctx.body.data = body;
-    // 手工批改作业题数
-    ctx.body.data.manual_task_number = body.hits.total;
-    // 提交总数
-    params.query.bool.must = params.query.bool.must.slice(0, -1);
-    params.query.bool.must_not.push({
-        match: {
-            status: '未答题'
-        }
-    });
-    options.body = JSON.stringify(params);
-    body = await _request(options);
-    const submitTotal = body.hits.total;
-    ctx.body.data.manual_correct_rate = ((ctx.body.data.manual_task_number / submitTotal) * 100).toFixed(2);
-    delete params.query.bool.must_not;
-    params.query.bool.must.push({
-        match: {
-            status: '已批改'
-        }
-    });
-    params.query.bool.must.push({
-        exists: {
-            field: 'correct'
-        }
-    });
-    options.body = JSON.stringify(params);
-    body = await _request(options);
-    ctx.body.data.manual_postil_rate = ((body.hits.total / submitTotal) * 100).toFixed(2);
-    // ctx.body.data = body
 }
 
 TestCtrl.clssHomework = async (ctx) => {
@@ -1269,7 +1284,7 @@ TestCtrl.homeworkRate = async (ctx) => {
                         },
                         {
                             match: {
-                                status: '已批改',
+                                'status.keyword': '已批改',
                             }
                         },
                         {
@@ -1278,38 +1293,38 @@ TestCtrl.homeworkRate = async (ctx) => {
                             }
                         }
                     ],
-                    should: [
-                        {
-                            bool: {
-                                must: [{
-                                    match: {
-                                        'task.type': 'non_task'
-                                    }
-                                }],
-                                must_not: [{
-                                    term: {
-                                        policy: 1
-                                    }
-                                }]
-                            }
-                        },
-                        {
-                            bool: {
-                                must: {
-                                    term: {
-                                        policy: 1
-                                    }
-                                },
-                                must_not: {
-                                    match: {
-                                        'task.type': 'non_task'
-                                    }
-                                }
-                            }
-                        },
-                    ],
+                    // should: [
+                    //     {
+                    //         bool: {
+                    //             must: [{
+                    //                 match: {
+                    //                     'task.type.keyword': 'non_task'
+                    //                 }
+                    //             }],
+                    //             must_not: [{
+                    //                 term: {
+                    //                     policy: 1
+                    //                 }
+                    //             }]
+                    //         }
+                    //     },
+                    //     {
+                    //         bool: {
+                    //             must: {
+                    //                 term: {
+                    //                     policy: 1
+                    //                 }
+                    //             },
+                    //             must_not: {
+                    //                 match: {
+                    //                     'task.type.keyword': 'non_task'
+                    //                 }
+                    //             }
+                    //         }
+                    //     },
+                    // ],
                     must_not: [],
-                    minimum_should_match: 1
+                    // minimum_should_match: 1
                 },
             },
             // _source: ['policy'],
@@ -1439,7 +1454,7 @@ TestCtrl.teacherStudentInteraction = async (ctx) => {
         size: 0
     }
     const options = {
-        url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/taskquestions/_search`,
+        url: `${aliUrl}:9200/taskquestions/_search`,
         metch: 'POST',
         // body: JSON.stringify(params),
         headers: {
@@ -1447,7 +1462,7 @@ TestCtrl.teacherStudentInteraction = async (ctx) => {
             'Content-Type': 'application/json'
         }
     }
-    ctx.body.data.interaction = [];
+    ctx.body.data.data = [];
     // params.query.bool.must = must;
     options.body = JSON.stringify(teacherParams);
     const teacherlist = await _request(options);
@@ -1524,7 +1539,7 @@ TestCtrl.teacherStudentInteraction = async (ctx) => {
         ctx.body.data.count = count;
         ctx.body.data.totalPage = Math.ceil(count / num);
 
-        ctx.body.data.interaction.push({
+        ctx.body.data.data.push({
             teacher_id: teacher_id,
             correct: correctTotal,
             correct_prob: correct_prob,
