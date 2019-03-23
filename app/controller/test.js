@@ -1400,8 +1400,8 @@ TestCtrl.teacherStudentInteraction = async (ctx) => {
             }
         },
         {
-            match: {
-                status: '已批改',
+            term: {
+                'status.keyword': '已批改',
             }
         },
         {
@@ -1411,7 +1411,7 @@ TestCtrl.teacherStudentInteraction = async (ctx) => {
         },
     ]
     const teacherParams = {
-        _source: ['task.teacher._id'],
+        _source: ['task.teacher', 'task.school.school_name'],
         from: from,
         size: num,
         collapse: {
@@ -1489,6 +1489,9 @@ TestCtrl.teacherStudentInteraction = async (ctx) => {
     // return 
     for (let item of teacherlist.hits.hits) {
         const teacher_id = item._source.task.teacher._id;
+        const teacher_name = item._source.task.teacher.name;
+        // console.log(item._source.task)
+        const school_name = item._source.task.school.school_name
         let _must = must.map(function (value) {
             return value;
         });
@@ -1511,7 +1514,8 @@ TestCtrl.teacherStudentInteraction = async (ctx) => {
         options.body = JSON.stringify(params);
         const all = await _request(options);
         const allTotal = all.hits.total;
-        // ctx.body.data.interaction = all;
+        // ctx.body.data.data = all;
+        // return
         classParams.query.bool.must[0].term['task.teacher._id'] = teacher_id;
         options.body = JSON.stringify(classParams);
         const classList = await _request(options);
@@ -1559,6 +1563,8 @@ TestCtrl.teacherStudentInteraction = async (ctx) => {
         
         ctx.body.data.data.push({
             teacher_id: teacher_id,
+            teacher_name: teacher_name,
+            school_name: school_name,
             correct_number: correct_number,
             correct_rate: correct_rate,
             arr_class: arr_class
