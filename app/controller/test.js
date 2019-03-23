@@ -1361,9 +1361,7 @@ TestCtrl.teacherStudentInteraction = async (ctx) => {
     }
     let from = 0;
     let { num, page, start_time, end_time, school_id } = ctx.query;
-    if (num) {
-        num = num ? num : 0;
-    }
+    num = num ? num : 10;
     if (page) {
         from = (page - 1) * num;
     }
@@ -1415,12 +1413,12 @@ TestCtrl.teacherStudentInteraction = async (ctx) => {
     if (school_id) {
         must.push({
             term: {
-                'task.school': school_id
+                'task.school._id': school_id
             }
         });
         teacherParams.query.bool.must.push({
             term: {
-                'task.school': school_id
+                'task.school._id': school_id
             }
         });
     }
@@ -1463,9 +1461,12 @@ TestCtrl.teacherStudentInteraction = async (ctx) => {
         }
     }
     ctx.body.data.data = [];
+    ctx.body.data.pageSize = num;
     // params.query.bool.must = must;
     options.body = JSON.stringify(teacherParams);
     const teacherlist = await _request(options);
+    // ctx.body = teacherParams;
+    // return 
     for (let item of teacherlist.hits.hits) {
         const teacher_id = item._source.task.teacher._id;
         let _must = must.map(function (value) {
