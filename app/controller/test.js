@@ -1923,8 +1923,8 @@ TestCtrl.classInformationCollect = async (ctx) => {
         const grade = await db.collection('classes').findOne({
             '_id': mongodb.ObjectID(class_id)
         });
-        console.log(grade)
-        return
+        // console.log(grade)
+        // return
         must.push({
             term: {
                 'task.class._id': class_id
