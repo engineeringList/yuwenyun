@@ -223,9 +223,10 @@ TestCtrl.teacherInformationCollect = async (ctx) => {
     }
     let { teacher_name } = ctx.query;
     let teacherParams = {};
-    // console.log(teacher_name)
+    
+    console.log(encodeURI(teacherParams))
     if (teacher_name) {
-        teacherParams = { name: { $regex: teacher_name } }
+        teacherParams = { name: { $regex: encodeURI(teacherParams) } }
         console.log(teacherParams)
     } 
     const teachers = await db.collection('teachers').find(teacherParams).toArray();
@@ -874,7 +875,7 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
         },
         {
             term: {
-                'task.type': 'homework',
+                'task.type.keyword': 'homework',
             }
         },
         {
@@ -947,9 +948,9 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
         // ctx.body.data = all
         // return
         // 提交数
-        params.query.bool.must_not.push({
-            term: {
-                'status.keyword': '未答题',
+        params.query.bool.must.push({
+            wildcard: {
+                'status.keyword': '*批改',
             }
         });
         options.body = JSON.stringify(params);
@@ -959,6 +960,7 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
         let len = all.aggregations.group_by_addTime.buckets.length;
         const submitBuckets = submit.aggregations.group_by_addTime.buckets;
         const allBuckets = all.aggregations.group_by_addTime.buckets;
+        // ctx.body = 
         let buckets = [];
         for (let i = 0; i < len; i++) {
             if (submitBuckets[i] && allBuckets[i].doc_count) {
@@ -969,7 +971,7 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
             } else {
                 buckets.push({
                     key: allBuckets[i].key,
-                    doc_count: 0
+                    doc_count: '0.00'
                 });
             }
         }
@@ -984,7 +986,7 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
             aggregation: {
                 avg: {
                     script: {
-                        inline: "doc['question_score'].value / doc['total_score'].value"
+                        inline: "if (doc['total_score'].value == 0) { return 0 } else { return doc['question_score'].value / doc['total_score'].value }"
                     }
                 }
             },
@@ -992,7 +994,8 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
         params.query.bool.must = must;
         options.body = JSON.stringify(params);
         const arr = await _request(options);
-        // ctx.body.data = all.aggregations
+        ctx.body.data = arr
+        return
         ctx.body.data.arr = arr.aggregations.group_by_addTime.buckets
     }
 }
