@@ -994,8 +994,8 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
         params.query.bool.must = must;
         options.body = JSON.stringify(params);
         const arr = await _request(options);
-        ctx.body.data = arr
-        return
+        // ctx.body.data = arr
+        // return
         ctx.body.data.arr = arr.aggregations.group_by_addTime.buckets
     }
 }
