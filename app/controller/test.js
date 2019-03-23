@@ -1839,124 +1839,45 @@ TestCtrl.classInformationCollect = async (ctx) => {
         data: {}
     }
     let from = 0;
-    let { num, page, start_time, end_time, school_id } = ctx.query;
+    let { num, page, start_time, end_time, class_name } = ctx.query;
     num = num ? num : 10;
     if (page) {
         from = (page - 1) * num;
     }
-    let must = [
-        {
-            range: {
-                'task.add_time': {
-                    gte: start_time,
-                    lte: end_time
-                }
-            }
-        },
-        {
-            term: {
-                'task.type': '',
-            }
-        }
-    ];
-    if (school_id) {
-        must.push({
-            term: {
-                'task.school': school_id
-            }
-        });
-        teacherParams.query.bool.must.push({
-            term: {
-                'task.school': school_id
-            }
-        });
-    }
-    const classParams = {
-        _source: ['task.class._id'],
-        query: {
-            bool: {
-                must: [],
-                must_not: []
-            },
-        },
-        aggs: {
-            count: {
-                cardinality: {
-                    field: 'task.class._id.keyword'
-                }
-            }
-        },
-        collapse: {
-            field: 'task.class._id.keyword'
-        }
-    }
-    const params = {
-        query: {
-            bool: {
-                must: [
 
-                ],
-                must_not: []
-            },
-        },
-        size: 0
+    let findParams = {};
+    if (class_name) {
+        findParams = { class_name: { $regex: class_name } }
     }
-    const options = {
-        url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/taskquestions/_search`,
-        metch: 'POST',
-        // body: JSON.stringify(params),
-        headers: {
-            "Authorization": 'Basic ZWxhc3RpYzokUmUxMjM0NTY3OA==',
-            'Content-Type': 'application/json'
-        }
-    }
-    // params.query.bool.must = must;
-    options.body = JSON.stringify(classParams);
-    const classList = await _request(options);
-    const count = classList.aggregations.count.value;
-    ctx.body.data.count = count;
+
+    const grades = await db.collection('classes').find(
+        findParams,
+        { limit: parseInt(num), skip: parseInt(from) }
+    ).toArray();
+    const count = await db.collection('classes').find().count();
+    console.log(count)
+    let arr = [];
+    for (let grade of grades) {
+        // const 
+        const school = await db.collection('schools').findOne({
+            'school_classess.$id': mongodb.ObjectID(grade._id)
+        });
+        const teacher = await db.collection('teachers').findOne({
+            '_id': mongodb.ObjectID(grade.class_teacher.oid)
+        });
+        arr.push({
+            class_name: grade.class_name,
+            school_name: school.school_name,
+            teacher_name: teacher.name,
+            school_address: school.school_address,
+            student_number: grade.class_students.length
+        });
+    }    
     ctx.body.data.pageSize = num;
+    ctx.body.data.currentPage = page;
+    ctx.body.data.count = count;
     ctx.body.data.totalPage = Math.ceil(count / num);
-    ctx.body.data.data = [];
-    for (let item of classList.hits.hits) {
-        const class_id = item._source.task.class._id;
-        const grade = await db.collection('classes').findOne({
-            '_id': mongodb.ObjectID(class_id)
-        });
-        // console.log(grade)
-        // return
-        must.push({
-            term: {
-                'task.class._id': class_id
-            }
-        });
-        // 系统推送题量
-        must[1].term['task.type'] = 'day_task';
-        params.query.bool.must = must;
-        options.body = JSON.stringify(params);
-        const dayTask = await _request(options);
-        // ctx.body.data.exerciseNumber = dayTask;
-        // 作业做题数量
-        must[1].term['task.type'] = 'homework';
-        params.query.bool.must = must;
-        options.body = JSON.stringify(params);
-        const homework = await _request(options);
-        // ctx.body.data.exerciseNumber = homework;
-        // return
-        // 自主做题题量
-        must[1].term['task.type'] = 'no_task';
-        params.query.bool.must = must;
-        options.body = JSON.stringify(params);
-        const noTask = await _request(options);
-        // ctx.body.data.exerciseNumber = noTask;
-        // const correctTotal = correct.hits.total;
-        ctx.body.data.data.push({
-            class_id: class_id,
-            dayTask: dayTask.hits.total,
-            homeworkNumber: homework.hits.total,
-            nonTaskNumber: noTask.hits.total,
-        })
-    }
+    ctx.body.data.data = arr;
 }
 
 TestCtrl.arrangeHomework = async (ctx) => {
