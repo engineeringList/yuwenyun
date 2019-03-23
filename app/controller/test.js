@@ -1317,68 +1317,49 @@ TestCtrl.homeworkRate = async (ctx) => {
                             term: {
                                 'task.class._id': grade._id,
                             }
-                        }
+                        },
+                        // {
+                        //     terms: {
+                        //         'task.type.keyword': ['non_task', 'day_task']
+                        //     }
+                        // }
                     ],
                     should: [
                         {
                             bool: {
-                                must: [{
-                                    term: {
-                                        'task.type.keyword': 'non_task'
-                                    }
-                                }],
-                                must_not: [{
-                                    term: {
-                                        policy: 1
-                                    }
-                                }]
-                            }
+                                must: [
+                                    {
+                                        terms: {
+                                            'task.type.keyword': ['non_task', 'day_task']
+                                        }
+                                    },
+                                    {
+                                        terms: {
+                                            'policy': [2, 3, 4, 5, 6]
+                                        }
+                                    },
+                                ],
+                            },
                         },
-                        // {
-                        //     bool: {
-                        //         must: {
-                        //             term: {
-                        //                 policy: 1
-                        //             }
-                        //         },
-                        //         must_not: {
-                        //             match: {
-                        //                 'task.type.keyword': 'non_task'
-                        //             }
-                        //         }
-                        //     }
-                        // },
-                        // {
-                        //     bool: {
-                        //         must: [{
-                        //             match: {
-                        //                 'task.type.keyword': 'day_task'
-                        //             }
-                        //         }],
-                        //         must_not: [{
-                        //             term: {
-                        //                 policy: 1
-                        //             }
-                        //         }]
-                        //     }
-                        // },
-                        // {
-                        //     bool: {
-                        //         must: {
-                        //             term: {
-                        //                 policy: 1
-                        //             }
-                        //         },
-                        //         must_not: {
-                        //             match: {
-                        //                 'task.type.keyword': 'day_task'
-                        //             }
-                        //         }
-                        //     }
-                        // },
+                        {
+                            bool: {
+                                must: [
+                                    {
+                                        term: {
+                                            policy: 1
+                                        }
+                                    },
+                                    {
+                                        term: {
+                                            'task.type.keyword': 'homework'
+                                        }
+                                    },
+                                ],
+                            },
+                        }
                     ],
                     must_not: [],
-                    minimum_should_match: 2
+                    minimum_should_match: 1
                 },
             },
             // _source: ['policy'],
@@ -1398,8 +1379,8 @@ TestCtrl.homeworkRate = async (ctx) => {
         }
         options.body = JSON.stringify(params);
         const score_rate = await _request(options);
-        ctx.body = score_rate;
-        return
+        // ctx.body = score_rate;
+        // return
         const val = score_rate.aggregations.aggregation.value
         grade.score_rate = val ? val : 0;
     }
