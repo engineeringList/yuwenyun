@@ -221,14 +221,16 @@ TestCtrl.teacherInformationCollect = async (ctx) => {
         errmsg: '',
         data: {}
     }
-    const { teacher_name } = ctx.query;
-    if (!teacher_name) {
-        ctx.body.errmsg = '参数不全';
-        return
-    }
-    const teachers = await db.collection('teachers').find({
-        name: { $regex: teacher_name } 
-    }).toArray();
+    let { teacher_name } = ctx.query;
+    let teacherParams = {};
+    // console.log(teacher_name)
+    if (teacher_name) {
+        teacherParams = { name: { $regex: teacher_name } }
+        console.log(teacherParams)
+    } 
+    const teachers = await db.collection('teachers').find(teacherParams).toArray();
+    // console.log(teachers)
+    // return
     const options = {
         url: `${aliUrl}:9200/taskquestions/_search`,
         metch: 'POST',
@@ -255,7 +257,13 @@ TestCtrl.teacherInformationCollect = async (ctx) => {
             query: {
                 bool: {
                     filter: [],
-                    must: [],
+                    must: [
+                        {
+                            term: {
+                                'task.type.keyword': 'homework'
+                            }
+                        }
+                    ],
                     must_not: []
                 },
             },
@@ -283,14 +291,21 @@ TestCtrl.teacherInformationCollect = async (ctx) => {
         // 手工批改作业题数
         params.query.bool.must.push({
             term: {
+                policy: 1
+            }
+        });
+        params.query.bool.must.push({
+            term: {
                 'status.keyword': '已批改'
             }
         });
         options.body = JSON.stringify(params);
         body = await _request(options);
         obj.manual_task_number = body.hits.total;
-        // 提交总数
+        // 提交的手工题数
         params.query.bool.must = params.query.bool.must.slice(0, -1);
+        // ctx.body = params
+        // return
         params.query.bool.must_not.push({
             term: {
                 'status.keyword': '未答题'
@@ -299,7 +314,9 @@ TestCtrl.teacherInformationCollect = async (ctx) => {
         options.body = JSON.stringify(params);
         body = await _request(options);
         const submitTotal = body.hits.total;
-        obj.manual_correct_rate = ((obj.manual_task_number / submitTotal) * 100).toFixed(2);
+        // 手工批改率
+        obj.manual_correct_rate = submitTotal ? ((obj.manual_task_number / submitTotal) * 100).toFixed(2) : '0.00';
+        // 批注率
         delete params.query.bool.must_not;
         params.query.bool.must.push({
             term: {
@@ -311,13 +328,13 @@ TestCtrl.teacherInformationCollect = async (ctx) => {
                 field: 'correct'
             }
         });
-        options.body = JSON.stringify(params);
-        body = await _request(options);
-        obj.manual_postil_rate = ((body.hits.total / submitTotal) * 100).toFixed(2);
-        ctx.body.data.data.push(obj);
-        // console.log(grade)
         // ctx.body = params
         // return
+        options.body = JSON.stringify(params);
+        // 批注的题数
+        body = await _request(options);
+        obj.manual_postil_rate = submitTotal ? ((body.hits.total / submitTotal) * 100).toFixed(2) : '0.00';
+        ctx.body.data.data.push(obj);
     }
 }
 
@@ -1128,6 +1145,7 @@ TestCtrl.schoolInformationCollect = async (ctx) => {
     if (school_name) {
         findParams = { school_name: { $regex: school_name } }
     }
+    // console.log(findParams)
     const schools = await db.collection('schools').find(
         findParams,
         { limit: parseInt(num), skip: parseInt(from) }
