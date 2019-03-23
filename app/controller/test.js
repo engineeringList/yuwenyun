@@ -1755,18 +1755,7 @@ TestCtrl.exerciseNumber = async (ctx) => {
             }
         }
     ];
-    if (school_id) {
-        must.push({
-            term: {
-                'task.school': school_id
-            }
-        });
-        // teacherParams.query.bool.must.push({
-        //     term: {
-        //         'task.school': school_id
-        //     }
-        // });
-    }
+    
     const classParams = {
         _source: ['task.class._id', 'task.class.class_name', 'task.class.class_year', 'task.school.school_name'],
         query: {
@@ -1785,7 +1774,21 @@ TestCtrl.exerciseNumber = async (ctx) => {
         collapse: {
             field: 'task.class._id.keyword'
         },
+        size: num,
+        from: from,
         sort: { 'task.school.school_name.keyword': { 'order': 'desc' }}
+    }
+    if (school_id) {
+        must.push({
+            term: {
+                'task.school._id': school_id
+            }
+        });
+        classParams.query.bool.must.push({
+            term: {
+                'task.school._id': school_id
+            }
+        });
     }
     const params = {
         query: {
@@ -1796,7 +1799,7 @@ TestCtrl.exerciseNumber = async (ctx) => {
                 must_not: []
             },
         },
-        size: 0
+        size: 1
     }
     const options = {
         url: `${aliUrl}:9200/taskquestions/_search`,
@@ -1833,7 +1836,8 @@ TestCtrl.exerciseNumber = async (ctx) => {
         params.query.bool.must = must;
         options.body = JSON.stringify(params);
         const dayTask = await _request(options);
-        // ctx.body.data.exerciseNumber = dayTask;
+        // ctx.body.data.data = dayTask;
+        // return
         // 作业做题数量
         must[1].term['task.type'] = 'homework';
         params.query.bool.must = must;
