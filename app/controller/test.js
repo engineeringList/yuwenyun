@@ -1303,8 +1303,13 @@ TestCtrl.homeworkRate = async (ctx) => {
                             }
                         },
                         {
-                            match: {
+                            term: {
                                 'status.keyword': '已批改',
+                            }
+                        },
+                        {
+                            exists: {
+                                field: 'total_score',
                             }
                         },
                         {
@@ -1317,7 +1322,7 @@ TestCtrl.homeworkRate = async (ctx) => {
                         {
                             bool: {
                                 must: [{
-                                    match: {
+                                    term: {
                                         'task.type.keyword': 'non_task'
                                     }
                                 }],
@@ -1328,70 +1333,72 @@ TestCtrl.homeworkRate = async (ctx) => {
                                 }]
                             }
                         },
-                        {
-                            bool: {
-                                must: {
-                                    term: {
-                                        policy: 1
-                                    }
-                                },
-                                must_not: {
-                                    match: {
-                                        'task.type.keyword': 'non_task'
-                                    }
-                                }
-                            }
-                        },
-                        {
-                            bool: {
-                                must: [{
-                                    match: {
-                                        'task.type.keyword': 'day_task'
-                                    }
-                                }],
-                                must_not: [{
-                                    term: {
-                                        policy: 1
-                                    }
-                                }]
-                            }
-                        },
-                        {
-                            bool: {
-                                must: {
-                                    term: {
-                                        policy: 1
-                                    }
-                                },
-                                must_not: {
-                                    match: {
-                                        'task.type.keyword': 'day_task'
-                                    }
-                                }
-                            }
-                        },
+                        // {
+                        //     bool: {
+                        //         must: {
+                        //             term: {
+                        //                 policy: 1
+                        //             }
+                        //         },
+                        //         must_not: {
+                        //             match: {
+                        //                 'task.type.keyword': 'non_task'
+                        //             }
+                        //         }
+                        //     }
+                        // },
+                        // {
+                        //     bool: {
+                        //         must: [{
+                        //             match: {
+                        //                 'task.type.keyword': 'day_task'
+                        //             }
+                        //         }],
+                        //         must_not: [{
+                        //             term: {
+                        //                 policy: 1
+                        //             }
+                        //         }]
+                        //     }
+                        // },
+                        // {
+                        //     bool: {
+                        //         must: {
+                        //             term: {
+                        //                 policy: 1
+                        //             }
+                        //         },
+                        //         must_not: {
+                        //             match: {
+                        //                 'task.type.keyword': 'day_task'
+                        //             }
+                        //         }
+                        //     }
+                        // },
                     ],
                     must_not: [],
-                    minimum_should_match: 4
+                    minimum_should_match: 2
                 },
             },
             // _source: ['policy'],
             aggs: {
                 aggregation: {
                     avg: {
+                        // script: {
+                        //     inline: "doc['total_score'].value"
+                        // }
                         script: {
                             inline: "if (doc['total_score'].value == 0) { return 0 } else { return doc['question_score'].value / doc['total_score'].value }"
                         }
                     }
                 },
             },
-            size: 0
+            size: 2
         }
         options.body = JSON.stringify(params);
         const score_rate = await _request(options);
-        // console.log(score_rate)
-        // ctx.body = score_rate;
-        // return
+        ctx.body = score_rate;
+        return
         const val = score_rate.aggregations.aggregation.value
         grade.score_rate = val ? val : 0;
     }
@@ -1776,7 +1783,10 @@ TestCtrl.exerciseNumber = async (ctx) => {
         },
         size: num,
         from: from,
-        sort: { 'task.school.school_name.keyword': { 'order': 'desc' }}
+        sort: [
+            { 'task.school.school_name.keyword': { 'order': 'desc' }},
+            { 'task.class.class_name.keyword': { 'order': 'asc' }},
+        ]
     }
     if (school_id) {
         must.push({
@@ -1843,7 +1853,7 @@ TestCtrl.exerciseNumber = async (ctx) => {
         params.query.bool.must = must;
         options.body = JSON.stringify(params);
         const homework = await _request(options);
-        // ctx.body.data.exerciseNumber = homework;
+        // ctx.body.data.data = params;
         // return
         // 自主做题题量
         must[1].term['task.type'] = 'no_task';
