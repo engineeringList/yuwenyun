@@ -976,11 +976,11 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
         }
         ctx.body.data.arr = buckets;
     } else if (type == '得分率') {
-        // must.push({
-        //     term: {
-        //         question_id: '5c6a075ae5d0c0e4802c5e19'
-        //     }
-        // })
+        must.push({
+            term: {
+                'status.keyword': '已批改'
+            }
+        });
         params.aggs.group_by_addTime.aggs = {
             aggregation: {
                 avg: {
