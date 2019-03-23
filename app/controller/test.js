@@ -1289,6 +1289,7 @@ TestCtrl.homeworkRate = async (ctx) => {
         });
         // console.log(school)
         // console.log(grade._id)
+        // 这个统计是这样status=已批改，task.type分两类情况，当task.type=homework时policy不做过滤，当task.type=non_task或day_task时，policy!=1过滤
         grade.school_name = _school.school_name;
         const params = {
             query: {
@@ -1836,30 +1837,34 @@ TestCtrl.exerciseNumber = async (ctx) => {
         const class_name = item._source.task.class.class_name;
         // ctx.body = item
         // return 
-        must.push({
+        let _must = must.map(function (value) {
+            return value;
+        });
+        _must.push({
             term: {
                 'task.class._id': class_id
             }
         });
         // 系统推送题量
-        must[1].term['task.type'] = 'day_task';
-        params.query.bool.must = must;
+        _must[1].term['task.type'] = 'day_task';
+        params.query.bool.must = _must;
         options.body = JSON.stringify(params);
         const dayTask = await _request(options);
         // ctx.body.data.data = dayTask;
         // return
         // 作业做题数量
-        must[1].term['task.type'] = 'homework';
-        params.query.bool.must = must;
+        _must[1].term['task.type'] = 'homework';
+        params.query.bool.must = _must;
         options.body = JSON.stringify(params);
         const homework = await _request(options);
         // ctx.body.data.data = params;
         // return
         // 自主做题题量
-        must[1].term['task.type'] = 'no_task';
-        params.query.bool.must = must;
+        _must[1].term['task.type'] = 'non_task';
+        params.query.bool.must = _must;
         options.body = JSON.stringify(params);
         const noTask = await _request(options);
+        // ctx.body = params
         // ctx.body.data.exerciseNumber = noTask;
         // const correctTotal = correct.hits.total;
         ctx.body.data.data.push({
