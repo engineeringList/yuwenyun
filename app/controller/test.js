@@ -1679,8 +1679,8 @@ TestCtrl.teacherTaskManger = async (ctx) => {
     if (type == '批改率') {
         let ratify, all;
         must.push({
-            match: {
-                status: '已批改',
+            term: {
+                'status.keyword': '已批改',
             }
         });
         params.query.bool.must = must;
@@ -1690,15 +1690,16 @@ TestCtrl.teacherTaskManger = async (ctx) => {
         // return
         params.query.bool.must = params.query.bool.must.slice(0, -1);
         params.query.bool.should.push({
-            match: {
-                status: '已批改',
+            term: {
+                'status.keyword': '已批改',
             }
         });
         params.query.bool.should.push({
-            match: {
-                status: '未批改',
+            term: {
+                'status.keyword': '未批改',
             }
         });
+        params.query.bool.minimum_should_match = 1;
         options.body = JSON.stringify(params);
         all = await _request(options);
         // ctx.body.data = all
@@ -1711,12 +1712,12 @@ TestCtrl.teacherTaskManger = async (ctx) => {
             if (ratifyBuckets[i] && allBuckets[i].doc_count) {
                 buckets.push({
                     key: allBuckets[i].key,
-                    doc_count: (ratifyBuckets[i].doc_count / allBuckets[i].doc_count).toFixed(2) * 100
+                    doc_count: ((ratifyBuckets[i].doc_count / allBuckets[i].doc_count) * 100).toFixed(2) 
                 });
             } else {
                 buckets.push({
                     key: allBuckets[i].key,
-                    doc_count: 0
+                    doc_count: '0.00'
                 });
             }
         }
