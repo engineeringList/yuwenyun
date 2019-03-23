@@ -1485,7 +1485,7 @@ TestCtrl.teacherStudentInteraction = async (ctx) => {
         params.query.bool.must = _must;
         options.body = JSON.stringify(params);
         const correct = await _request(options);
-        const correctTotal = correct.hits.total;
+        const correct_number = correct.hits.total;
         // ctx.body.data.interaction = correct;
         params.query.bool.must = params.query.bool.must.slice(0, -1);
         options.body = JSON.stringify(params);
@@ -1516,37 +1516,37 @@ TestCtrl.teacherStudentInteraction = async (ctx) => {
             params.query.bool.must = _must;
             options.body = JSON.stringify(params);
             const correct = await _request(options);
-            const correctTotal = correct.hits.total;
+            const correct_number = correct.hits.total;
             // ctx.body.data.interaction = correct;
             params.query.bool.must = params.query.bool.must.slice(0, -1);
             options.body = JSON.stringify(params);
             const all = await _request(options);
             const allTotal = all.hits.total;
-            let correct_prob = (correctTotal / allTotal).toFixed(2) * 100;
+            let correct_rate = ((correct_number / allTotal) * 100).toFixed(2);
             if (!allTotal) {
-                correct_prob = 0;
+                correct_rate = 0;
             }
             arr_class.push({
                 class_id: class_id,
-                correct: correctTotal,
-                correct_prob: correct_prob
+                correct_number: correct_number,
+                correct_rate: correct_rate
             });
         }
-        let correct_prob = (correctTotal / allTotal).toFixed(2) * 100;
+        let correct_rate = ((correct_number / allTotal) * 100).toFixed(2);
         if (!allTotal) {
-            correct_prob = 0;
+            correct_rate = 0;
         }
-        const count = teacherlist.aggregations.count.value
-        ctx.body.data.count = count;
-        ctx.body.data.totalPage = Math.ceil(count / num);
-
+        
         ctx.body.data.data.push({
             teacher_id: teacher_id,
-            correct: correctTotal,
-            correct_prob: correct_prob,
+            correct_number: correct_number,
+            correct_rate: correct_rate,
             arr_class: arr_class
         });
     }
+    const count = teacherlist.aggregations.count.value
+    ctx.body.data.count = count;
+    ctx.body.data.totalPage = Math.ceil(count / num);
     // ctx.body.data.interaction = body;
 }
 
