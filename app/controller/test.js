@@ -226,8 +226,8 @@ TestCtrl.teacherInformationCollect = async (ctx) => {
     // console.log(typeof teacher_name)
     if (teacher_name) {
         teacherParams = { name: { $regex: teacher_name } }
-    } 
-    
+    }
+
     const teachers = await db.collection('teachers').find(teacherParams).toArray();
     // console.log(teachers)
     // return
@@ -764,7 +764,7 @@ TestCtrl.livenessReport = async (ctx) => {
         errmsg: '',
         data: {}
     }
-    const { param_id, start_time, end_time, type, cycle_type } = ctx.query;
+    const { param_id, start_time, end_time, type, cycle_type, level } = ctx.query;
     if (!param_id || !type || !cycle_type) {
         ctx.body.errmsg = '参数不全';
         return
@@ -805,48 +805,181 @@ TestCtrl.livenessReport = async (ctx) => {
         size: 0
     }
     const options = {
-        url: `http://es-cn-0pp116ay3000md3ux.public.elasticsearch.aliyuncs.com:9200/event/_search`,
+        url: `${aliUrl}:9200/event/_search`,
         metch: 'POST',
         headers: {
             "Authorization": 'Basic ZWxhc3RpYzokUmUxMjM0NTY3OA==',
             'Content-Type': 'application/json'
         }
     }
-    ctx.body.data.livenessReport = [];
-    if (type == '学生') {
-        must.push({
-            term: {
-                "student._id": param_id,
+    ctx.body.data.data = [];
+    if (level == '学校') {
+        if (type == '学生') {
+            const school = await db.collection('schools').findOne({
+                _id: mongodb.ObjectID(param_id)
+            });
+            let gradeIdArr = school.school_classess.map(grade => {
+                return grade.oid;
+            });
+            const grades = await db.collection('classes').find({
+                _id: { $in: gradeIdArr }
+            }).toArray();
+            must.push({
+                term: {
+                    role: 'student',
+                }
+            });
+            for (let grade of grades) {
+                for (let student of grade.class_students) {
+                    const studentId = student.oid;
+                    const _student = await db.collection('students').findOne({
+                        _id: mongodb.ObjectID(studentId)
+                    });
+                    let studentName = '';
+                    if (_student) {
+                        studentName = _student.name;
+                    }
+                    let _must = must.map(value => {
+                        return value;
+                    });
+                    _must.push({
+                        term: {
+                            'student._id': studentId,
+                        }
+                    });
+                    params.query.bool.must = _must;
+                    options.body = JSON.stringify(params);
+                    const body = await _request(options);
+                    ctx.body.data.data.push({
+                        _id: studentId,
+                        name: studentName,
+                        arr: body.aggregations.group_by_eventTime.buckets
+                    });
+                }
             }
-        });
-        must.push({
-            term: {
-                role: 'student',
+        } else if (type == '教师') {
+            must.push({
+                term: {
+                    role: 'teacher',
+                }
+            });
+            const teachers = await db.collection('teachers').aggregate(
+                [
+                    {
+                        $lookup: {
+                            from: 'schools',
+                            localField: '_id',
+                            foreignField: 'school_teachers',
+                            as: 'school'
+                        }
+                    },
+                    {
+                        $match: { 'school._id': mongodb.ObjectID(param_id) },
+                    }
+                ]
+            ).toArray();
+            for (let teacher of teachers) {
+                let _must = must.map(value => {
+                    return value;
+                });
+                _must.push({
+                    term: {
+                        'teacher._id': teacher._id,
+                    }
+                });
+                params.query.bool.must = _must;
+                options.body = JSON.stringify(params);
+                const body = await _request(options);
+                ctx.body.data.data.push({
+                    _id: teacher._id,
+                    name: teacher.name || '',
+                    arr: body.aggregations.group_by_eventTime.buckets
+                });
             }
-        });
-        params.query.bool.must = must;
-        options.body = JSON.stringify(params);
-        const body = await _request(options);
-        ctx.body.data.livenessReport = body.aggregations.group_by_eventTime.buckets;
-        // ctx.body.data.livenessReport = params;
-        // ctx.body.data.livenessReport = body;
-    } else if (type == '教师') {
-        must.push({
-            term: {
-                'teacher._id': param_id,
+        }
+    }
+    if (level == '班级') {
+        if (type == '学生') {
+            must.push({
+                term: {
+                    role: 'student',
+                }
+            });
+            const grade = await db.collection('classes').findOne({
+                _id: mongodb.ObjectID(param_id)
+            });
+            for (let student of grade.class_students) {
+                const studentId = student.oid;
+                const _student = await db.collection('students').findOne({
+                    _id: mongodb.ObjectID(studentId)
+                });
+                let studentName = '';
+                if (_student) {
+                    studentName = _student.name;
+                }
+                let _must = must.map(value => {
+                    return value;
+                });
+                _must.push({
+                    term: {
+                        'student._id': studentId,
+                    }
+                });
+                params.query.bool.must = _must;
+                options.body = JSON.stringify(params);
+                const body = await _request(options);
+                ctx.body.data.data.push({
+                    _id: studentId,
+                    name: studentName,
+                    arr: body.aggregations.group_by_eventTime.buckets
+                });
             }
-        });
-        must.push({
-            term: {
-                role: 'teacher',
-            }
-        });
-        params.query.bool.must = must;
-        options.body = JSON.stringify(params);
-        const body = await _request(options);
-        // ctx.body.data.livenessReport = params;
-        ctx.body.data.livenessReport = body.aggregations.group_by_eventTime.buckets;
-        // ctx.body.data.livenessReport = body;
+        } else if (type == '教师') {
+            must.push({
+                term: {
+                    role: 'teacher',
+                }
+            });
+            const grade = await db.collection('classes').findOne({
+                _id: mongodb.ObjectID(param_id)
+            });
+            const teacherId = grade.class_teacher.oid;
+            const _teacher = await db.collection('teachers').findOne({
+                _id: mongodb.ObjectID(teacherId)
+            });
+            must.push({
+                term: {
+                    'teacher._id': teacherId,
+                }
+            });
+            params.query.bool.must = must;
+            options.body = JSON.stringify(params);
+            const body = await _request(options);
+            ctx.body.data.data.push({
+                _id: _teacher._id,
+                name: _teacher.name || '',
+                arr: body.aggregations.group_by_eventTime.buckets
+            });
+            // for (let teacher of grade.class_teacher) {
+
+            //     let _must = must.map(value => {
+            //         return value;
+            //     });
+            //     _must.push({
+            //         term: {
+            //             'teacher._id': teacher._id,
+            //         }
+            //     });
+            //     params.query.bool.must = _must;
+            //     options.body = JSON.stringify(params);
+            //     const body = await _request(options);
+            //     ctx.body.data.data.push({
+            //         _id: _teacher._id,
+            //         name: _teacher.name || '',
+            //         arr: body.aggregations.group_by_eventTime.buckets
+            //     });
+            // }
+        }
     }
 }
 
@@ -965,7 +1098,7 @@ TestCtrl.taskCompleteSituation = async (ctx) => {
             if (submitBuckets[i] && allBuckets[i].doc_count) {
                 buckets.push({
                     key: allBuckets[i].key,
-                    doc_count: ((submitBuckets[i].doc_count / allBuckets[i].doc_count)  * 100).toFixed(2)
+                    doc_count: ((submitBuckets[i].doc_count / allBuckets[i].doc_count) * 100).toFixed(2)
                 });
             } else {
                 buckets.push({
@@ -1577,7 +1710,7 @@ TestCtrl.teacherStudentInteraction = async (ctx) => {
         if (!allTotal) {
             correct_rate = 0;
         }
-        
+
         ctx.body.data.data.push({
             teacher_id: teacher_id,
             teacher_name: teacher_name,
@@ -1693,7 +1826,7 @@ TestCtrl.teacherTaskManger = async (ctx) => {
             if (ratifyBuckets[i] && allBuckets[i].doc_count) {
                 buckets.push({
                     key: allBuckets[i].key,
-                    doc_count: ((ratifyBuckets[i].doc_count / allBuckets[i].doc_count) * 100).toFixed(2) 
+                    doc_count: ((ratifyBuckets[i].doc_count / allBuckets[i].doc_count) * 100).toFixed(2)
                 });
             } else {
                 buckets.push({
@@ -1745,7 +1878,7 @@ TestCtrl.exerciseNumber = async (ctx) => {
             }
         }
     ];
-    
+
     const classParams = {
         _source: ['task.class._id', 'task.class.class_name', 'task.class.class_year', 'task.school.school_name'],
         query: {
@@ -1767,8 +1900,8 @@ TestCtrl.exerciseNumber = async (ctx) => {
         size: num,
         from: from,
         sort: [
-            { 'task.school.school_name.keyword': { 'order': 'desc' }},
-            { 'task.class.class_name.keyword': { 'order': 'asc' }},
+            { 'task.school.school_name.keyword': { 'order': 'desc' } },
+            { 'task.class.class_name.keyword': { 'order': 'asc' } },
         ]
     }
     if (school_id) {
@@ -1901,7 +2034,7 @@ TestCtrl.classInformationCollect = async (ctx) => {
             school_address: school.school_address,
             student_number: grade.class_students.length
         });
-    }    
+    }
     ctx.body.data.pageSize = num;
     ctx.body.data.currentPage = page;
     ctx.body.data.count = count;
@@ -1964,43 +2097,43 @@ TestCtrl.arrangeHomework = async (ctx) => {
     }
     const len = arr.length;
     const schoolParams = {};
-    const teacherParams = {	
-        _source: ['task.teacher._id'],	
-        from: from,	
-        size: num,	
-        collapse: {	
-            field: 'task.teacher._id.keyword'	
-        },	
-        aggs: {	
-            count: {	
-                cardinality: {	
-                    field: 'task.teacher._id.keyword'	
-                }	
-            }	
-        },	
-        query: {	
-            bool: {	
-                must: []	
-            }	
-        }	
+    const teacherParams = {
+        _source: ['task.teacher._id'],
+        from: from,
+        size: num,
+        collapse: {
+            field: 'task.teacher._id.keyword'
+        },
+        aggs: {
+            count: {
+                cardinality: {
+                    field: 'task.teacher._id.keyword'
+                }
+            }
+        },
+        query: {
+            bool: {
+                must: []
+            }
+        }
     }
-    const classParams = {	
-        _source: ['task.class._id'],	
-        query: {	
-            bool: {	
-                must: [	
-                    {	
-                        term: {	
-                            'task.teacher._id': ''	
-                        }	
-                    }	
-                ],	
-                must_not: []	
-            },	
-        },	
-        collapse: {	
-            field: 'task.class._id.keyword'	
-        }	        
+    const classParams = {
+        _source: ['task.class._id'],
+        query: {
+            bool: {
+                must: [
+                    {
+                        term: {
+                            'task.teacher._id': ''
+                        }
+                    }
+                ],
+                must_not: []
+            },
+        },
+        collapse: {
+            field: 'task.class._id.keyword'
+        }
     }
     // const teacherParams = [
     //     {
@@ -2023,17 +2156,17 @@ TestCtrl.arrangeHomework = async (ctx) => {
     //         term: 'task.type': 'homework',
     //     })
     // }
-    if (school_id) {	
-        must.push({	
-            term: {	
-                'task.school._id': school_id	
-            }	
-        });	
-        teacherParams.query.bool.must.push({	
-            term: {	
-                'task.school._id': school_id	
-            }	
-        });	
+    if (school_id) {
+        must.push({
+            term: {
+                'task.school._id': school_id
+            }
+        });
+        teacherParams.query.bool.must.push({
+            term: {
+                'task.school._id': school_id
+            }
+        });
     }
     options.body = JSON.stringify(teacherParams);
     const teacherlist = await _request(options);
